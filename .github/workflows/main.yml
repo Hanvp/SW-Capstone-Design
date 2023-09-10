@@ -53,8 +53,8 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application-name: sw-capstone
-          environment_name: Sw-capstone-env
+          application-name: 'sw-capstone'
+          environment_name: 'Sw-capstone-env'
           version_label: Github Action-${{steps.current-time.outputs.formattedTime}}
           region: ap-northeast-2
           deployment_package: deploy/deploy.zip
