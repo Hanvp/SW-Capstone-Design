@@ -1,4 +1,4 @@
-package sw.capstone.domain;
+package sw.sms.domain;
 
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;

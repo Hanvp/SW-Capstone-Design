@@ -27,3 +27,13 @@ spring:
       #      root: info
       org.hibernate.SQL: DEBUG
       org.hibernate.type: trace
+
+naver:
+  service:
+    id: ${naver.service.id}
+  send:
+    phoneNum: ${naver.from}
+  access:
+    key: ${naver.access.key}
+  secret:
+    key: ${naver.secret.key}

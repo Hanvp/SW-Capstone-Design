@@ -1,4 +1,4 @@
-package sw.capstone.domain;
+package sw.sms.domain;
 
 import lombok.*;
 
@@ -9,7 +9,7 @@ import javax.persistence.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class EmailRandomNum {
+public class SmsRandomNum {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
