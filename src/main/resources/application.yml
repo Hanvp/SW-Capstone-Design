@@ -27,3 +27,7 @@ spring:
       #      root: info
       org.hibernate.SQL: DEBUG
       org.hibernate.type: trace
+
+oauth2:
+  fcm:
+    projectId: ${fcm.project.id}
