@@ -37,3 +37,4 @@ out/
 .vscode/
 
 src/main/resources/.env
+src/main/java/sw/capstone/config/FcmConfig.json

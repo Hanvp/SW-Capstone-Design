@@ -9,7 +9,7 @@ import javax.persistence.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class EmailRandomNum {
+public class MemberRandomNum {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
