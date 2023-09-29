@@ -3,17 +3,22 @@ package sw.capstone.domain;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RandomNum {
+public class Notification {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 6)
-    private String value;
+    private String title;
+    private String body;
+
+    @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
+    private List<MemberNotification> memberNotificationList;
 }
