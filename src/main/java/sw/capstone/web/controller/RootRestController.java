@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sw.capstone.service.NotifcationService;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
+import sw.capstone.web.dto.requestDto.SmsRequestDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
+import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 
 @RestController
@@ -23,6 +25,11 @@ public class RootRestController {
     @GetMapping("/health")
     public String healthAPi(){
         return "i'm healthy";
+    }
+
+    @PostMapping("/server/sms")
+    public SmsResponseDto.SmsResultDto sendSms(@RequestBody SmsRequestDto.request request) {
+        return notifcationService.sendSmsWorker(request);
     }
 
     @PostMapping("/server/fcm")

@@ -7,13 +7,17 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotifcationService;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
+import sw.capstone.web.dto.requestDto.SmsRequestDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
+import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,11 +30,38 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class NotifcationServiceImpl implements NotifcationService {
 
+    private final MemberRepository memberRepository;
     private final FcmTokenRepository fcmTokenRepository;
     private final RandomNumRepository randomNumRepository;
     private final MemberRandomNumRepository memberRandomNumRepository;
     private final MemberNotificationRepository memberNotificationRepository;
 
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    @Transactional(readOnly = false)
+    @Override
+    public SmsResponseDto.SmsResultDto sendSmsWorker(SmsRequestDto.request request) {
+        Optional<Member> findMember = memberRepository.findByPhoneNum(request.getTargetPhoneNum());
+
+        if(findMember == null){
+            log.error("해당 전화번호를을 가지고 있는 사용자가 없습니다.");
+            return SmsResponseDto.SmsResultDto.builder().succeed("fail").build();
+        }
+
+        String randomNum = saveRandomNum(findMember.get());
+
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+
+        valueOperations.set("targetPhoneNum", request.getTargetPhoneNum());
+        valueOperations.set("randomNum", randomNum);
+
+        return SmsResponseDto.SmsResultDto.builder()
+                .phoneNum(String.valueOf(valueOperations.get("targetPhoneNum")))
+                .succeed("success")
+                .build();
+    }
+
+    @Transactional(readOnly = false)
     @Override
     public FcmResponseDto.FcmResultDto sendFcmWorker(FcmRequestDto.request request) {
 
