@@ -1,4 +1,4 @@
-package sw.capstone.config;
+package sw.capstone.redis.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
