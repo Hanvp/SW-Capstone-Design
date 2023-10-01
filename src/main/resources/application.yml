@@ -33,6 +33,13 @@ spring:
     host: localhost
 #    host: ${redis.url}
     port: 6379
+    publish:
+      rate: 10000
+    key: "swCapstoneStream"
+    group:
+      sms: "sms"
+      email: "email"
+      fcm: "fcm"
 
 oauth2:
   fcm:

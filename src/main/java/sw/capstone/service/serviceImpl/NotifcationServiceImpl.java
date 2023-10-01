@@ -6,12 +6,19 @@ import com.google.auth.oauth2.GoogleCredentials;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.stream.ObjectRecord;
+import org.springframework.data.redis.connection.stream.RecordId;
+import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
+import sw.capstone.redis.dto.RedisDto;
+import sw.capstone.redis.util.RedisOperator;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotifcationService;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
@@ -37,6 +44,24 @@ public class NotifcationServiceImpl implements NotifcationService {
     private final MemberNotificationRepository memberNotificationRepository;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisOperator redisOperator;
+
+    @Value("${spring.redis.key}")
+    private String streamKey;
+
+    @Value("${spring.redis.group.sms}")
+    private String smsGroup;
+
+    @Value("${spring.redis.group.email}")
+    private String emailGroup;
+
+    @Value("${spring.redis.group.fcm}")
+    private String fcmGroup;
+
+    @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
+    public void publishEvent(){
+
+    }
 
     @Transactional(readOnly = false)
     @Override
@@ -50,13 +75,30 @@ public class NotifcationServiceImpl implements NotifcationService {
 
         String randomNum = saveRandomNum(findMember.get());
 
+        /*
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
 
         valueOperations.set("targetPhoneNum", request.getTargetPhoneNum());
         valueOperations.set("randomNum", randomNum);
+         */
+
+        ObjectRecord<String, RedisDto.SmsRedisStream> record = StreamRecords.newRecord()
+                .ofObject(RedisDto.SmsRedisStream.builder()
+                        .targetPhoneNum(findMember.get().getPhoneNum())
+                        .randomNum(randomNum)
+                        .build())
+                .withStreamKey(streamKey);
+
+//        RecordId recordId = redisTemplate
+//                .opsForStream()
+//                .add(record);
+
+        redisTemplate.opsForStream()
+                .acknowledge(smsGroup, record);
+
 
         return SmsResponseDto.SmsResultDto.builder()
-                .phoneNum(String.valueOf(valueOperations.get("targetPhoneNum")))
+                .phoneNum(findMember.get().getPhoneNum())
                 .succeed("success")
                 .build();
     }
@@ -80,6 +122,8 @@ public class NotifcationServiceImpl implements NotifcationService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+
 
         log.info("accessToken: ", accessToken, ", targetFcmToken: ", request.getFcmToken(),
                 ", title: ", notification.getTitle(), ", body: ", notification.getBody());
