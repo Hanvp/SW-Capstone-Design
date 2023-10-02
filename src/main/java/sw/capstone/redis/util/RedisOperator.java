@@ -7,17 +7,22 @@ import io.lettuce.core.protocol.CommandArgs;
 import io.lettuce.core.protocol.CommandKeyword;
 import io.lettuce.core.protocol.CommandType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RedisOperator {
@@ -25,6 +30,14 @@ public class RedisOperator {
 
     public Object getRedisValue(String key, String field){
         return this.redisTemplate.opsForHash().get(key, field);
+    }
+
+    public void sendToGroup(String key, String consumerGroupName, ObjectRecord<String, Object> record) {
+
+        log.info(Collections.singletonMap("record",record).toString());
+
+        this.redisTemplate.opsForStream().add(key, Collections.singletonMap("record",record));
+        this.redisTemplate.convertAndSend(key, consumerGroupName + ":" + record);
     }
 
     public long increaseRedisValue(String key, String field){

@@ -30,8 +30,8 @@ spring:
 
 
   redis:
-    host: localhost
-#    host: ${redis.url}
+#    host: localhost
+    host: ${redis.url}
     port: 6379
     publish:
       rate: 10000

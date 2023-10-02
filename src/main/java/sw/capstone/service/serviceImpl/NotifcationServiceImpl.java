@@ -82,19 +82,14 @@ public class NotifcationServiceImpl implements NotifcationService {
         valueOperations.set("randomNum", randomNum);
          */
 
-        ObjectRecord<String, RedisDto.SmsRedisStream> record = StreamRecords.newRecord()
-                .ofObject(RedisDto.SmsRedisStream.builder()
+        ObjectRecord<String, Object> record = StreamRecords.newRecord()
+                .ofObject((Object) RedisDto.SmsRedisStream.builder()
                         .targetPhoneNum(findMember.get().getPhoneNum())
                         .randomNum(randomNum)
                         .build())
                 .withStreamKey(streamKey);
 
-//        RecordId recordId = redisTemplate
-//                .opsForStream()
-//                .add(record);
-
-        redisTemplate.opsForStream()
-                .acknowledge(smsGroup, record);
+        redisOperator.sendToGroup(streamKey, smsGroup, record);
 
 
         return SmsResponseDto.SmsResultDto.builder()
