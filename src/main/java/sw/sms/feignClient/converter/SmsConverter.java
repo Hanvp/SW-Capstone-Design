@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto;
 import sw.sms.feignClient.dto.responseDto.NaverFeignResponseDto;
+import sw.sms.redis.dto.RedisSmsDto;
 import sw.sms.web.dto.requestDto.SmsRequestDto;
 import sw.sms.web.dto.responseDto.SmsReponseDto;
 
@@ -15,6 +16,32 @@ import static sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto.*;
 @Slf4j
 public class SmsConverter {
 
+    public static NaverFeignRequestDto.SmsRequestDto toSmsRequestDto(Object request, String from){
+
+        List<Message> messageList = new ArrayList<>();
+        messageList.add(toMessage((RedisSmsDto.SmsInfo) request));
+
+        return NaverFeignRequestDto.SmsRequestDto.builder()
+                .type("SMS")
+                .contentType("COMM")
+                .countryCode("82")
+                .from(from)
+                .content("sw-capstone 인증 문자 테스트")
+                .messages(messageList)
+                .build();
+    }
+
+    public static Message toMessage(RedisSmsDto.SmsInfo request) {
+        return Message.builder()
+                .to(request.getTargetPhoneNum())
+                .content("sw-capstone 인증 문자 테스트\n"+"["+request.getRandomNum()+"]")
+                .build();
+    }
+
+
+    //-------------------------------------------------------------
+    //- 레디스 미적용 -
+    //-------------------------------------------------------------
 
     public static NaverFeignRequestDto.SmsRequestDto toSmsReqeustDto(SmsRequestDto.SmsSendInfo request, String from){
 
