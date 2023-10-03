@@ -35,7 +35,10 @@ spring:
     port: 6379
     publish:
       rate: 10000
-    key: "swCapstoneStream"
+    key:
+      sms: "stream:sms"
+      email: "stream:email"
+      fcm: "stream:fcm"
     group:
       sms: "sms"
       email: "email"

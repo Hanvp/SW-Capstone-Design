@@ -28,6 +28,7 @@ import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,17 +47,14 @@ public class NotifcationServiceImpl implements NotifcationService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedisOperator redisOperator;
 
-    @Value("${spring.redis.key}")
-    private String streamKey;
+    @Value("${spring.redis.key.sms}")
+    private String smsStream;
 
-    @Value("${spring.redis.group.sms}")
-    private String smsGroup;
+    @Value("${spring.redis.key.email}")
+    private String emailStream;
 
-    @Value("${spring.redis.group.email}")
-    private String emailGroup;
-
-    @Value("${spring.redis.group.fcm}")
-    private String fcmGroup;
+    @Value("${spring.redis.key.fcm}")
+    private String fcmStream;
 
     @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
     public void publishEvent(){
@@ -75,21 +73,15 @@ public class NotifcationServiceImpl implements NotifcationService {
 
         String randomNum = saveRandomNum(findMember.get());
 
-        /*
-        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-
-        valueOperations.set("targetPhoneNum", request.getTargetPhoneNum());
-        valueOperations.set("randomNum", randomNum);
-         */
 
         ObjectRecord<String, Object> record = StreamRecords.newRecord()
                 .ofObject((Object) RedisDto.SmsRedisStream.builder()
                         .targetPhoneNum(findMember.get().getPhoneNum())
                         .randomNum(randomNum)
                         .build())
-                .withStreamKey(streamKey);
+                .withStreamKey(smsStream);
 
-        redisOperator.sendToGroup(streamKey, smsGroup, record);
+        redisOperator.sendToGroup(record);
 
 
         return SmsResponseDto.SmsResultDto.builder()

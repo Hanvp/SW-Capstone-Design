@@ -10,6 +10,7 @@ public class RedisDto {
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class SmsRedisStream{
+
         private String targetPhoneNum;
         private String randomNum;
 

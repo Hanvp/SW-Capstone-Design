@@ -32,10 +32,7 @@ public class RedisConfig {
         redisTemplate.setKeySerializer(new StringRedisSerializer());
 
         /* Java 기본 직렬화가 아닌 JSON 직렬화 설정 */
-//        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-
-        redisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
-
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
 
         return redisTemplate;
     }

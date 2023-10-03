@@ -1,9 +1,9 @@
-version: "3.9"
+version: "3.3"
 services:
   redis:
     image: redis:7.0-alpine
 #    command: redis-server --port 6379
-    container_name: redis
+    container_name: sw-redis
     ports:
       - "6379:6379"
 
@@ -20,9 +20,7 @@ services:
 #      - sw_capstone_network
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: hanvp/sw-capstone:notif0.1
     restart: always
     container_name: notification_server
 #    depends_on:
@@ -35,10 +33,10 @@ services:
       - FCM_PROJECT_ID=${FCM_PROJECT_ID}
     ports:
       - "8080:8080"
-    networks:
-      - sw_capstone_network
+#    networks:
+#      - sw_capstone_network
 
 #networks를 통해서 db와 server를 같은 network로 묶어줘야 한다.
-networks:
-  sw_capstone_network:
-    driver: bridge
+#networks:
+#  sw_capstone_network:
+#    driver: bridge
