@@ -64,7 +64,7 @@ public class PendingMessageScheduler implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.streamKey = "swCapstoneStream";
+        this.streamKey = "stream:sms";
         this.consumerGroupName = "sms";
         this.consumerName = "sms1";
     }

@@ -1,25 +1,25 @@
 package sw.sms.feignClient.converter;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto;
 import sw.sms.feignClient.dto.responseDto.NaverFeignResponseDto;
-import sw.sms.redis.dto.RedisSmsDto;
+import sw.sms.redis.dto.SmsRedisStream;
 import sw.sms.web.dto.requestDto.SmsRequestDto;
 import sw.sms.web.dto.responseDto.SmsReponseDto;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto.*;
 
 @Slf4j
 public class SmsConverter {
 
-    public static NaverFeignRequestDto.SmsRequestDto toSmsRequestDto(Object request, String from){
+    public static NaverFeignRequestDto.SmsRequestDto toSmsRequestDto(SmsRedisStream request, String from){
 
         List<Message> messageList = new ArrayList<>();
-        messageList.add(toMessage((RedisSmsDto.SmsInfo) request));
+        messageList.add(toMessage(request));
 
         return NaverFeignRequestDto.SmsRequestDto.builder()
                 .type("SMS")
@@ -31,10 +31,17 @@ public class SmsConverter {
                 .build();
     }
 
-    public static Message toMessage(RedisSmsDto.SmsInfo request) {
+    public static Message toMessage(SmsRedisStream request) {
         return Message.builder()
                 .to(request.getTargetPhoneNum())
                 .content("sw-capstone 인증 문자 테스트\n"+"["+request.getRandomNum()+"]")
+                .build();
+    }
+
+    public static Message toMessage(Map<Object, Object> request) {
+        return Message.builder()
+                .to(request.get("targetPhoneNum").toString())
+                .content("sw-capstone 인증 문자 테스트\n"+"["+request.get("randomNum").toString()+"]")
                 .build();
     }
 

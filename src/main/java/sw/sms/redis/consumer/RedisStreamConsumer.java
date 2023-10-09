@@ -1,11 +1,15 @@
 package sw.sms.redis.consumer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.stream.*;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
@@ -13,10 +17,12 @@ import org.springframework.stereotype.Component;
 import sw.sms.feignClient.NaverFeignClient;
 import sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto;
 import sw.sms.feignClient.dto.responseDto.NaverFeignResponseDto;
-import sw.sms.redis.dto.RedisSmsDto;
+import sw.sms.redis.dto.SmsRedisStream;
 import sw.sms.redis.util.RedisOperator;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
 
 import static sw.sms.feignClient.converter.SmsConverter.*;
 
@@ -33,6 +39,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     // 위에 구현한 Redis Streamd에 필요한 기본 Command를 구현한 Component
     private final RedisOperator redisOperator;
+    private final RedisTemplate redisTemplate;
 
     private final NaverFeignClient naverFeignClient;
 
@@ -41,14 +48,33 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     @Override
     public void onMessage(MapRecord<String, Object, Object> record) {
-        String entry = record.getId().toString();
 
-        // 처리할 로직 구현
-        NaverFeignRequestDto.SmsRequestDto smsRequestDto = toSmsRequestDto(record.getValue().get(entry), from);
-        NaverFeignResponseDto.SmsResponseDto response = naverFeignClient.sendSms(smsRequestDto);
+        log.info(record.toString());
 
-        // 이후, ack stream
-        this.redisOperator.ackStream("sms", record);
+        String data = (String) record.getValue().get("info");
+
+        Optional<SmsRedisStream> value = null;
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            value = Optional.of(objectMapper.readValue(data, SmsRedisStream.class));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (value.get() == null){
+            log.error("정보가 안담겨옴");
+        }
+        else {
+            //처리할 로직 구현
+            NaverFeignRequestDto.SmsRequestDto smsRequestDto = toSmsRequestDto(value.get(), from);
+            NaverFeignResponseDto.SmsResponseDto response = naverFeignClient.sendSms(smsRequestDto);
+
+            log.info(response.toString());
+
+            // 이후, ack stream
+            this.redisOperator.ackStream("sms", record);
+        }
     }
 
     @Override
@@ -64,7 +90,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     @Override
     public void afterPropertiesSet() throws Exception {
         // Stream 기본 정보
-        this.streamKey = "swCapstoneStream";
+        this.streamKey = "stream:sms";
         this.consumerGroupName = "sms";
         this.consumerName = "sms1";
 
@@ -81,8 +107,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
                 this
         );
 
-        // 1초 마다, 정보 GET
-        this.subscription.await(Duration.ofSeconds(1));
+        // 5초 마다, 정보 GET
+        this.subscription.await(Duration.ofMillis(50000));
 
         // redis listen 시작
         this.listenerContainer.start();
