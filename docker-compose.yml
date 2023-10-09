@@ -1,0 +1,20 @@
+version: "3.3"
+services:
+  redis:
+    image: redis:7.0-alpine
+    container_name: sw-redis
+    ports:
+      - "6379:6379"
+
+  app:
+    image: hanvp/sw-capstone:sms-0.1
+    restart: always
+    container_name: sms_server
+    environment:
+      - NAVER_ACCESS_KEY=${NAVER_ACCESS_KEY}
+      - NAVER_FROM=${NAVER_FROM}
+      - NAVER_SECRET_KEY=${NAVER_SECRET_KEY}
+      - NAVER_SERVICE_ID=${NAVER_SERVICE_ID}
+      - REDIS_URL=${REDIS_URL}
+    ports:
+      - "8080:8080"
