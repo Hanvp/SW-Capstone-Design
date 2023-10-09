@@ -20,7 +20,7 @@ services:
 #      - sw_capstone_network
 
   app:
-    image: hanvp/sw-capstone:notif0.1
+    image: hanvp/sw-capstone:notif-0.1
     restart: always
     container_name: notification_server
 #    depends_on:

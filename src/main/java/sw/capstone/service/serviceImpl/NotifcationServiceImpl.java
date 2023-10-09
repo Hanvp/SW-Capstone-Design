@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ObjectRecord;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.connection.stream.StreamRecords;
@@ -17,7 +18,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
-import sw.capstone.redis.dto.RedisDto;
+import sw.capstone.redis.dto.SmsRedisStream;
 import sw.capstone.redis.util.RedisOperator;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotifcationService;
@@ -27,10 +28,7 @@ import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -73,16 +71,21 @@ public class NotifcationServiceImpl implements NotifcationService {
 
         String randomNum = saveRandomNum(findMember.get());
 
+        SmsRedisStream smsRedisStream = new SmsRedisStream(findMember.get().getPhoneNum(), randomNum);
+//        Map<String, Object> stringObjectMap = smsRedisStream.toMap();
+//
+//        this.redisTemplate.opsForStream().add(smsStream, stringObjectMap);
 
-        ObjectRecord<String, Object> record = StreamRecords.newRecord()
-                .ofObject((Object) RedisDto.SmsRedisStream.builder()
-                        .targetPhoneNum(findMember.get().getPhoneNum())
-                        .randomNum(randomNum)
-                        .build())
-                .withStreamKey(smsStream);
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String value = objectMapper.writeValueAsString(smsRedisStream);
+            HashMap<String, String> map = new HashMap<>();
+            map.put("info",value);
+            this.redisTemplate.opsForStream().add(smsStream, map);
 
-        redisOperator.sendToGroup(record);
-
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
 
         return SmsResponseDto.SmsResultDto.builder()
                 .phoneNum(findMember.get().getPhoneNum())

@@ -28,12 +28,6 @@ public class RedisOperator {
         return this.redisTemplate.opsForHash().get(key, field);
     }
 
-    public void sendToGroup(ObjectRecord<String, Object> record) {
-
-        log.info(record.toString());
-
-        this.redisTemplate.opsForStream().add(record);
-    }
 
     public long increaseRedisValue(String key, String field){
         return this.redisTemplate.opsForHash().increment(key, field, 1);
