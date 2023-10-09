@@ -1,0 +1,42 @@
+version: "3.3"
+services:
+  redis:
+    image: redis:7.0-alpine
+#    command: redis-server --port 6379
+    container_name: sw-redis
+    ports:
+      - "6379:6379"
+
+#  database:
+#    image: mysql:latest
+#    container_name: mysql
+#    environment:
+#      - MYSQL_ROOT_HOST=${aws.db.username}
+#      - MYSQL_ROOT_PASSWORD=${aws.db.password}
+#      - MYSQL_DATABASE=capstone
+#    ports:
+#      - "3306:3306"
+#    networks:
+#      - sw_capstone_network
+
+  app:
+    image: hanvp/sw-capstone:notif-0.1
+    restart: always
+    container_name: notification_server
+#    depends_on:
+#      - database
+    environment:
+      - AWS_DB_URL=${AWS_DB_URL}
+      - AWS_DB_USERNAME=${AWS_DB_USERNAME}
+      - AWS_DB_PASSWORD=${AWS_DB_PASSWORD}
+      - REDIS_URL=${REDIS_URL}
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID}
+    ports:
+      - "8080:8080"
+#    networks:
+#      - sw_capstone_network
+
+#networks를 통해서 db와 server를 같은 network로 묶어줘야 한다.
+#networks:
+#  sw_capstone_network:
+#    driver: bridge
