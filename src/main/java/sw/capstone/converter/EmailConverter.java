@@ -7,10 +7,10 @@ import sw.capstone.web.dto.responseDto.EmailResponseDto;
 @Slf4j
 public class EmailConverter {
 
-    public static EmailResponseDto.EmailSendResultDto toEmailResultDto(EmailRequestDto.EmailSendInfo request, String succeed){
+    public static EmailResponseDto.EmailSendResultDto toEmailResultDto(String targetEmail, String randomNum, String succeed){
         return EmailResponseDto.EmailSendResultDto.builder()
-                .email(request.getTargetEmail())
-                .randomNum(request.getRandomNum())
+                .email(targetEmail)
+                .randomNum(randomNum)
                 .succeed(succeed)
                 .build();
     }

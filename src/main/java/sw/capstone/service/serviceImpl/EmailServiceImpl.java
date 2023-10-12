@@ -40,9 +40,9 @@ public class EmailServiceImpl implements EmailService {
             mimeMessageHelper.setText(setContext(request.getRandomNum()), true);
             javaMailSender.send(mimeMessage);
 
-            return EmailConverter.toEmailResultDto(request, "success");
+            return EmailConverter.toEmailResultDto(request.getTargetEmail(), request.getRandomNum(), "success");
         } catch (MessagingException e) {
-            return EmailConverter.toEmailResultDto(request, "fail");
+            return EmailConverter.toEmailResultDto(request.getTargetEmail(), request.getRandomNum(),"fail");
         }
     }
 
