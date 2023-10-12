@@ -39,7 +39,6 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     // 위에 구현한 Redis Streamd에 필요한 기본 Command를 구현한 Component
     private final RedisOperator redisOperator;
-    private final RedisTemplate redisTemplate;
 
     private final NaverFeignClient naverFeignClient;
 
@@ -67,7 +66,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         }
         else {
             //처리할 로직 구현
-            NaverFeignRequestDto.SmsRequestDto smsRequestDto = toSmsRequestDto(value.get(), from);
+            NaverFeignRequestDto.SmsRequestDto smsRequestDto = toSmsRequestDto(value.get().getTargetPhoneNum(), value.get().getRandomNum(), from);
             NaverFeignResponseDto.SmsResponseDto response = naverFeignClient.sendSms(smsRequestDto);
 
             log.info(response.toString());
@@ -107,8 +106,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
                 this
         );
 
-        // 5초 마다, 정보 GET
-        this.subscription.await(Duration.ofMillis(50000));
+        // 2초 마다, 정보 GET
+        this.subscription.await(Duration.ofSeconds(2));
 
         // redis listen 시작
         this.listenerContainer.start();
