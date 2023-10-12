@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sw.capstone.service.NotifcationService;
+import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
 import sw.capstone.web.dto.requestDto.SmsRequestDto;
+import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
@@ -27,9 +29,24 @@ public class RootRestController {
         return "i'm healthy";
     }
 
-    @PostMapping("/server/sms")
-    public SmsResponseDto.SmsResultDto sendSms(@RequestBody SmsRequestDto.request request) {
-        return notifcationService.sendSmsWorker(request);
+    @PostMapping("/redis/sms")
+    public SmsResponseDto.SmsResultDto sendSmsRedis(@RequestBody SmsRequestDto.request request) {
+        return notifcationService.sendSmsRedisWorker(request);
+    }
+
+    @PostMapping("/rabbitMq/sms")
+    public SmsResponseDto.SmsResultDto sendSmsRabbitMq(@RequestBody SmsRequestDto.request request) {
+        return notifcationService.sendSmsMqWorker(request);
+    }
+
+    @PostMapping("/redis/email")
+    public EmailResponseDto.EmailResultDto sendEmailRedis(@RequestBody EmailRequestDto.request request) {
+        return notifcationService.sendEmailRedisWorker(request);
+    }
+
+    @PostMapping("/rabbitMq/email")
+    public EmailResponseDto.EmailResultDto sendEmailRabbitMq(@RequestBody EmailRequestDto.request request) {
+        return notifcationService.sendEmailMqWorker(request);
     }
 
     @PostMapping("/server/fcm")

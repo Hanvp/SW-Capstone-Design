@@ -6,6 +6,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -18,12 +19,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
+import sw.capstone.rabbitMQ.dto.EmailRabbitMQDto;
+import sw.capstone.rabbitMQ.dto.SmsRabbitMQDto;
+import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.dto.SmsRedisStream;
 import sw.capstone.redis.util.RedisOperator;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotifcationService;
+import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
 import sw.capstone.web.dto.requestDto.SmsRequestDto;
+import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
@@ -43,7 +49,9 @@ public class NotifcationServiceImpl implements NotifcationService {
     private final MemberNotificationRepository memberNotificationRepository;
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final RedisOperator redisOperator;
+
+    private final RabbitTemplate rabbitTemplate;
+
 
     @Value("${spring.redis.key.sms}")
     private String smsStream;
@@ -54,27 +62,39 @@ public class NotifcationServiceImpl implements NotifcationService {
     @Value("${spring.redis.key.fcm}")
     private String fcmStream;
 
-    @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
-    public void publishEvent(){
+    @Value("${spring.rabbitmq.exchange.sms}")
+    private String smsExchange;
 
-    }
+    @Value("${spring.rabbitmq.exchange.email}")
+    private String emailExchange;
+
+    @Value("${spring.rabbitmq.exchange.fcm}")
+    private String fcmExchange;
+
+    @Value("${spring.rabbitmq.routing.sms}")
+    private String smsRoutingKey;
+
+    @Value("${spring.rabbitmq.routing.email}")
+    private String emailRoutingKey;
+
+    @Value("${spring.rabbitmq.routing.fcm}")
+    private String fcmRoutingKey;
+
+
+//    @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
+//    public void publishEvent(){
+//
+//    }
 
     @Transactional(readOnly = false)
     @Override
-    public SmsResponseDto.SmsResultDto sendSmsWorker(SmsRequestDto.request request) {
-        Optional<Member> findMember = memberRepository.findByPhoneNum(request.getTargetPhoneNum());
+    public SmsResponseDto.SmsResultDto sendSmsRedisWorker(SmsRequestDto.request request) {
 
-        if(findMember == null){
-            log.error("해당 전화번호를을 가지고 있는 사용자가 없습니다.");
-            return SmsResponseDto.SmsResultDto.builder().succeed("fail").build();
-        }
+        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
 
-        String randomNum = saveRandomNum(findMember.get());
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
 
-        SmsRedisStream smsRedisStream = new SmsRedisStream(findMember.get().getPhoneNum(), randomNum);
-//        Map<String, Object> stringObjectMap = smsRedisStream.toMap();
-//
-//        this.redisTemplate.opsForStream().add(smsStream, stringObjectMap);
+        SmsRedisStream smsRedisStream = new SmsRedisStream(memberRandomNum.getMember().getPhoneNum(), memberRandomNum.getRandomNum().getValue());
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -88,9 +108,71 @@ public class NotifcationServiceImpl implements NotifcationService {
         }
 
         return SmsResponseDto.SmsResultDto.builder()
-                .phoneNum(findMember.get().getPhoneNum())
+                .phoneNum(memberRandomNum.getMember().getPhoneNum())
                 .succeed("success")
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = false)
+    public SmsResponseDto.SmsResultDto sendSmsMqWorker(SmsRequestDto.request request) {
+
+        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
+
+        rabbitTemplate.convertAndSend(smsExchange, smsRoutingKey,
+                new SmsRabbitMQDto(memberRandomNum.getMember().getPhoneNum(),
+                memberRandomNum.getRandomNum().getValue()));
+
+        return SmsResponseDto.SmsResultDto.builder()
+                .phoneNum(memberRandomNum.getMember().getPhoneNum())
+                .succeed("success")
+                .build();
+    }
+
+    @Transactional(readOnly = false)
+    @Override
+    public EmailResponseDto.EmailResultDto sendEmailRedisWorker(EmailRequestDto.request request) {
+
+        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
+        EmailRedisStream emailRedisStream = new EmailRedisStream(memberRandomNum.getMember().getEmail(), memberRandomNum.getRandomNum().getValue());
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String value = objectMapper.writeValueAsString(emailRedisStream);
+            HashMap<String, String> map = new HashMap<>();
+            map.put("info",value);
+            this.redisTemplate.opsForStream().add(emailStream, map);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return EmailResponseDto.EmailResultDto.builder()
+                .email(memberRandomNum.getMember().getEmail())
+                .succeed("success")
+                .build();
+
+    }
+
+    @Transactional(readOnly = false)
+    @Override
+    public EmailResponseDto.EmailResultDto sendEmailMqWorker(EmailRequestDto.request request) {
+        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
+        rabbitTemplate.convertAndSend(emailExchange, emailRoutingKey,
+                new EmailRabbitMQDto(memberRandomNum.getMember().getEmail(),
+                        memberRandomNum.getRandomNum().getValue()));
+
+        return EmailResponseDto.EmailResultDto.builder()
+                .email(memberRandomNum.getMember().getEmail())
+                .succeed("success")
+                .build();
+
     }
 
     @Transactional(readOnly = false)
@@ -140,7 +222,17 @@ public class NotifcationServiceImpl implements NotifcationService {
 
     }
 
-    private String saveRandomNum(Member member) {
+    private MemberRandomNum setRandomNum(Optional<Member> findMember) {
+
+        if(findMember == null){
+            log.error("해당 id를을 가지고 있는 사용자가 없습니다.");
+            throw new RuntimeException("해당 id를을 가지고 있는 사용자가 없습니다.");
+        }
+
+        return saveRandomNum(findMember.get());
+    }
+
+    private MemberRandomNum saveRandomNum(Member member) {
         String randomNum = UUID.randomUUID().toString().substring(0,6);
 
         while (randomNumRepository.existsByValue(randomNum)){
@@ -148,11 +240,9 @@ public class NotifcationServiceImpl implements NotifcationService {
         }
 
         RandomNum savedRandomNum = randomNumRepository.save(RandomNum.builder().value(randomNum).build());
-        memberRandomNumRepository.save(MemberRandomNum.builder()
+        return memberRandomNumRepository.save(MemberRandomNum.builder()
                 .member(member)
                 .randomNum(savedRandomNum)
                 .build());
-
-        return randomNum;
     }
 }

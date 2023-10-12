@@ -24,13 +24,12 @@ spring:
 
   logging:
     level:
-      #      root: info
+      root: info
       org.hibernate.SQL: DEBUG
       org.hibernate.type: trace
 
 
   redis:
-#    host: localhost
     host: ${redis.url}
     port: 6379
     publish:
@@ -43,6 +42,24 @@ spring:
       sms: "sms"
       email: "email"
       fcm: "fcm"
+
+  rabbitmq:
+    host: ${RABBITMQ_URL}
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    queue:
+      sms: "queue:sms"
+      email: "queue:email"
+      fcm: "queue:fcm"
+    exchange:
+      sms: "exchange:sms"
+      email: "exchange:email"
+      fcm: "exchange:fcm"
+    routing:
+      sms: "key:sms"
+      email: "key:email"
+      fcm: "key:fcm"
 
 oauth2:
   fcm:
