@@ -7,6 +7,18 @@ spring:
     port: 6379
     key: "stream:sms"
 
+  rabbitmq:
+    url: ${RABBITMQ_URL}
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    queue:
+      sms: "queue:sms"
+    exchange:
+      sms: "exchange:sms"
+    routing:
+      sms: "key:sms"
+
 naver:
   service:
     id: ${naver.service.id}

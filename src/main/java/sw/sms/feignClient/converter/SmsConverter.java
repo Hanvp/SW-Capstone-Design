@@ -16,10 +16,10 @@ import static sw.sms.feignClient.dto.requestDto.NaverFeignRequestDto.*;
 @Slf4j
 public class SmsConverter {
 
-    public static NaverFeignRequestDto.SmsRequestDto toSmsRequestDto(SmsRedisStream request, String from){
+    public static NaverFeignRequestDto.SmsRequestDto toSmsRequestDto(String targetPhoneNum, String randomNum, String from){
 
         List<Message> messageList = new ArrayList<>();
-        messageList.add(toMessage(request));
+        messageList.add(toMessage(targetPhoneNum, randomNum));
 
         return NaverFeignRequestDto.SmsRequestDto.builder()
                 .type("SMS")
@@ -31,10 +31,10 @@ public class SmsConverter {
                 .build();
     }
 
-    public static Message toMessage(SmsRedisStream request) {
+    public static Message toMessage(String targetPhoneNum, String randomNum) {
         return Message.builder()
-                .to(request.getTargetPhoneNum())
-                .content("sw-capstone 인증 문자 테스트\n"+"["+request.getRandomNum()+"]")
+                .to(targetPhoneNum)
+                .content("sw-capstone 인증 문자 테스트\n"+"["+randomNum+"]")
                 .build();
     }
 
