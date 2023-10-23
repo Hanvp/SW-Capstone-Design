@@ -3,29 +3,24 @@ package sw.capstone.service.serviceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.ObjectRecord;
-import org.springframework.data.redis.connection.stream.RecordId;
-import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
+import sw.capstone.kafka.dto.EmailKafkaDto;
+import sw.capstone.kafka.producer.KafkaProducer;
 import sw.capstone.rabbitMQ.dto.EmailRabbitMQDto;
 import sw.capstone.rabbitMQ.dto.SmsRabbitMQDto;
 import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.dto.SmsRedisStream;
-import sw.capstone.redis.util.RedisOperator;
 import sw.capstone.repository.*;
-import sw.capstone.service.NotifcationService;
+import sw.capstone.service.NotificationService;
 import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
 import sw.capstone.web.dto.requestDto.SmsRequestDto;
@@ -40,7 +35,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class NotifcationServiceImpl implements NotifcationService {
+public class NotificationServiceImpl implements NotificationService {
 
     private final MemberRepository memberRepository;
     private final FcmTokenRepository fcmTokenRepository;
@@ -51,7 +46,7 @@ public class NotifcationServiceImpl implements NotifcationService {
     private final RedisTemplate<String, Object> redisTemplate;
 
     private final RabbitTemplate rabbitTemplate;
-
+    private final KafkaProducer kafkaProducer;
 
     @Value("${spring.redis.key.sms}")
     private String smsStream;
@@ -80,11 +75,15 @@ public class NotifcationServiceImpl implements NotifcationService {
     @Value("${spring.rabbitmq.routing.fcm}")
     private String fcmRoutingKey;
 
+    @Value("${spring.kafka.topic.email}")
+    private String emailTopic;
 
-//    @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
-//    public void publishEvent(){
-//
-//    }
+    @Value("${spring.kafka.topic.sms}")
+    private String smsTopic;
+
+    @Value("${spring.kafka.topic.fcm}")
+    private String fcmTopic;
+
 
     @Transactional(readOnly = false)
     @Override
@@ -172,7 +171,23 @@ public class NotifcationServiceImpl implements NotifcationService {
                 .email(memberRandomNum.getMember().getEmail())
                 .succeed("success")
                 .build();
+    }
 
+    @Transactional(readOnly = false)
+    @Override
+    public EmailResponseDto.EmailResultDto sendEmailKafkaWorker(EmailRequestDto.request request) throws JsonProcessingException {
+        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
+        kafkaProducer.send(emailTopic, EmailKafkaDto.builder()
+                .targetEmail(findMember.get().getEmail())
+                .randomNum(memberRandomNum.getRandomNum().getValue()));
+
+
+        return EmailResponseDto.EmailResultDto.builder()
+                .email(memberRandomNum.getMember().getEmail())
+                .succeed("success")
+                .build();
     }
 
     @Transactional(readOnly = false)

@@ -61,6 +61,13 @@ spring:
       email: "key:email"
       fcm: "key:fcm"
 
+  kafka:
+    bootstrap-servers: ${KAFKA_URL}:9092"
+    topic:
+      email: "topic:email"
+      sms: "topic:sms"
+      fcm: "topic:fcm"
+
 oauth2:
   fcm:
     projectId: ${fcm.project.id}
