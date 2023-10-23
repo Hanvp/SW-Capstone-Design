@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sw.capstone.service.NotificationService;
+import sw.capstone.service.RootService;
 import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.requestDto.FcmRequestDto;
+import sw.capstone.web.dto.requestDto.RootRequestDto;
 import sw.capstone.web.dto.requestDto.SmsRequestDto;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
@@ -24,6 +26,7 @@ import sw.capstone.web.dto.responseDto.SmsResponseDto;
 public class RootRestController {
 
     private final NotificationService notificationService;
+    private final RootService rootService;
 
     @GetMapping("/health")
     public String healthAPi(){
@@ -58,5 +61,10 @@ public class RootRestController {
     @PostMapping("/server/fcm")
     public FcmResponseDto.FcmResultDto sendFcm(@RequestBody FcmRequestDto.request request) {
         return notificationService.sendFcmWorker(request);
+    }
+
+    @PostMapping("/setDB")
+    public void setDB(@RequestBody RootRequestDto.request request) {
+        rootService.setDB(request);
     }
 }

@@ -62,7 +62,8 @@ spring:
       fcm: "key:fcm"
 
   kafka:
-    bootstrap-servers: ${KAFKA_URL}:9092"
+    producer:
+      bootstrap-servers: ${KAFKA_URL}:9092
     topic:
       email: "topic:email"
       sms: "topic:sms"
