@@ -19,6 +19,7 @@ public class RootServiceImpl implements RootService {
     @Override
     public void setDB(RootRequestDto.request request) {
         Member member = Member.builder()
+                .id(request.getId())
                 .name(request.getName())
                 .email(request.getEmail())
                 .phoneNum(request.getPhoneNum())

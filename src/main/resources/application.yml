@@ -65,9 +65,9 @@ spring:
     producer:
       bootstrap-servers: ${KAFKA_URL}:9092
     topic:
-      email: "topic:email"
-      sms: "topic:sms"
-      fcm: "topic:fcm"
+      email: "email"
+      sms: "sms"
+      fcm: "fcm"
 
 oauth2:
   fcm:

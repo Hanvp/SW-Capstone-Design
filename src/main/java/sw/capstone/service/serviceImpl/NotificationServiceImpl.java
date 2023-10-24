@@ -9,7 +9,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
@@ -21,9 +20,6 @@ import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.dto.SmsRedisStream;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotificationService;
-import sw.capstone.web.dto.requestDto.EmailRequestDto;
-import sw.capstone.web.dto.requestDto.FcmRequestDto;
-import sw.capstone.web.dto.requestDto.SmsRequestDto;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
@@ -87,9 +83,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional(readOnly = false)
     @Override
-    public SmsResponseDto.SmsResultDto sendSmsRedisWorker(SmsRequestDto.request request) {
+    public SmsResponseDto.SmsResultDto sendSmsRedisWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
 
@@ -114,9 +110,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = false)
-    public SmsResponseDto.SmsResultDto sendSmsMqWorker(SmsRequestDto.request request) {
+    public SmsResponseDto.SmsResultDto sendSmsMqWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
 
@@ -132,9 +128,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional(readOnly = false)
     @Override
-    public EmailResponseDto.EmailResultDto sendEmailRedisWorker(EmailRequestDto.request request) {
+    public EmailResponseDto.EmailResultDto sendEmailRedisWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
         EmailRedisStream emailRedisStream = new EmailRedisStream(memberRandomNum.getMember().getEmail(), memberRandomNum.getRandomNum().getValue());
@@ -159,8 +155,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional(readOnly = false)
     @Override
-    public EmailResponseDto.EmailResultDto sendEmailMqWorker(EmailRequestDto.request request) {
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+    public EmailResponseDto.EmailResultDto sendEmailMqWorker(Long memberId) {
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
         rabbitTemplate.convertAndSend(emailExchange, emailRoutingKey,
@@ -175,8 +171,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional(readOnly = false)
     @Override
-    public EmailResponseDto.EmailResultDto sendEmailKafkaWorker(EmailRequestDto.request request) throws JsonProcessingException {
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+    public EmailResponseDto.EmailResultDto sendEmailKafkaWorker(Long memberId) throws JsonProcessingException {
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
         kafkaProducer.send(emailTopic, EmailKafkaDto.builder()
@@ -192,9 +188,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional(readOnly = false)
     @Override
-    public FcmResponseDto.FcmResultDto sendFcmWorker(FcmRequestDto.request request) {
+    public FcmResponseDto.FcmResultDto sendFcmWorker(Long memberId) {
 
-        Optional<FcmToken> findFcmInfo = fcmTokenRepository.findByFcmToken(request.getFcmToken());
+        Member findMember = memberRepository.findById(memberId).get();
+        Optional<FcmToken> findFcmInfo = fcmTokenRepository.findByMember(findMember);
 
         if (findFcmInfo == null){
             log.error("해당 Fcm Token을 가지고 있는 사용자가 없습니다.");
@@ -212,8 +209,8 @@ public class NotificationServiceImpl implements NotificationService {
 
 
 
-        log.info("accessToken: ", accessToken, ", targetFcmToken: ", request.getFcmToken(),
-                ", title: ", notification.getTitle(), ", body: ", notification.getBody());
+//        log.info("accessToken: ", accessToken, ", targetFcmToken: ", request.getFcmToken(),
+//                ", title: ", notification.getTitle(), ", body: ", notification.getBody());
 
 
         return null;
