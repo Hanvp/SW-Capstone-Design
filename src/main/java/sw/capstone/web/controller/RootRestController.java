@@ -27,7 +27,7 @@ public class RootRestController {
         return "i'm healthy";
     }
 
-    @GetMapping("/redis/sms/{memberId}")
+    @PostMapping("/redis/sms/{memberId}")
     public SmsResponseDto.SmsResultDto sendSmsRedis(@PathVariable(name = "memberId") Long request) {
         return notificationService.sendSmsRedisWorker(request);
     }

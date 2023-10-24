@@ -175,9 +175,11 @@ public class NotificationServiceImpl implements NotificationService {
         Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
+
+
         kafkaProducer.send(emailTopic, EmailKafkaDto.builder()
                 .targetEmail(findMember.get().getEmail())
-                .randomNum(memberRandomNum.getRandomNum().getValue()));
+                .randomNum(memberRandomNum.getRandomNum().getValue()).build());
 
 
         return EmailResponseDto.EmailResultDto.builder()
