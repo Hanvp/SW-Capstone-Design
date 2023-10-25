@@ -3,32 +3,23 @@ package sw.capstone.service.serviceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.ObjectRecord;
-import org.springframework.data.redis.connection.stream.RecordId;
-import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sw.capstone.domain.*;
+import sw.capstone.kafka.dto.EmailKafkaDto;
+import sw.capstone.kafka.producer.KafkaProducer;
 import sw.capstone.rabbitMQ.dto.EmailRabbitMQDto;
 import sw.capstone.rabbitMQ.dto.SmsRabbitMQDto;
 import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.dto.SmsRedisStream;
-import sw.capstone.redis.util.RedisOperator;
 import sw.capstone.repository.*;
-import sw.capstone.service.NotifcationService;
-import sw.capstone.web.dto.requestDto.EmailRequestDto;
-import sw.capstone.web.dto.requestDto.FcmRequestDto;
-import sw.capstone.web.dto.requestDto.SmsRequestDto;
+import sw.capstone.service.NotificationService;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
@@ -40,7 +31,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class NotifcationServiceImpl implements NotifcationService {
+public class NotificationServiceImpl implements NotificationService {
 
     private final MemberRepository memberRepository;
     private final FcmTokenRepository fcmTokenRepository;
@@ -51,7 +42,7 @@ public class NotifcationServiceImpl implements NotifcationService {
     private final RedisTemplate<String, Object> redisTemplate;
 
     private final RabbitTemplate rabbitTemplate;
-
+    private final KafkaProducer kafkaProducer;
 
     @Value("${spring.redis.key.sms}")
     private String smsStream;
@@ -80,17 +71,21 @@ public class NotifcationServiceImpl implements NotifcationService {
     @Value("${spring.rabbitmq.routing.fcm}")
     private String fcmRoutingKey;
 
+    @Value("${spring.kafka.topic.email}")
+    private String emailTopic;
 
-//    @Scheduled(fixedRateString = "${spring.redis.publish.rate}")
-//    public void publishEvent(){
-//
-//    }
+    @Value("${spring.kafka.topic.sms}")
+    private String smsTopic;
+
+    @Value("${spring.kafka.topic.fcm}")
+    private String fcmTopic;
+
 
     @Transactional(readOnly = false)
     @Override
-    public SmsResponseDto.SmsResultDto sendSmsRedisWorker(SmsRequestDto.request request) {
+    public SmsResponseDto.SmsResultDto sendSmsRedisWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
 
@@ -115,9 +110,9 @@ public class NotifcationServiceImpl implements NotifcationService {
 
     @Override
     @Transactional(readOnly = false)
-    public SmsResponseDto.SmsResultDto sendSmsMqWorker(SmsRequestDto.request request) {
+    public SmsResponseDto.SmsResultDto sendSmsMqWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
 
@@ -133,9 +128,9 @@ public class NotifcationServiceImpl implements NotifcationService {
 
     @Transactional(readOnly = false)
     @Override
-    public EmailResponseDto.EmailResultDto sendEmailRedisWorker(EmailRequestDto.request request) {
+    public EmailResponseDto.EmailResultDto sendEmailRedisWorker(Long memberId) {
 
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
         EmailRedisStream emailRedisStream = new EmailRedisStream(memberRandomNum.getMember().getEmail(), memberRandomNum.getRandomNum().getValue());
@@ -160,8 +155,8 @@ public class NotifcationServiceImpl implements NotifcationService {
 
     @Transactional(readOnly = false)
     @Override
-    public EmailResponseDto.EmailResultDto sendEmailMqWorker(EmailRequestDto.request request) {
-        Optional<Member> findMember = memberRepository.findById(request.getMemberId());
+    public EmailResponseDto.EmailResultDto sendEmailMqWorker(Long memberId) {
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
         MemberRandomNum memberRandomNum = setRandomNum(findMember);
         rabbitTemplate.convertAndSend(emailExchange, emailRoutingKey,
@@ -172,14 +167,33 @@ public class NotifcationServiceImpl implements NotifcationService {
                 .email(memberRandomNum.getMember().getEmail())
                 .succeed("success")
                 .build();
-
     }
 
     @Transactional(readOnly = false)
     @Override
-    public FcmResponseDto.FcmResultDto sendFcmWorker(FcmRequestDto.request request) {
+    public EmailResponseDto.EmailResultDto sendEmailKafkaWorker(Long memberId) throws JsonProcessingException {
+        Optional<Member> findMember = memberRepository.findById(memberId);
 
-        Optional<FcmToken> findFcmInfo = fcmTokenRepository.findByFcmToken(request.getFcmToken());
+        MemberRandomNum memberRandomNum = setRandomNum(findMember);
+
+
+        kafkaProducer.send(emailTopic, EmailKafkaDto.builder()
+                .targetEmail(findMember.get().getEmail())
+                .randomNum(memberRandomNum.getRandomNum().getValue()).build());
+
+
+        return EmailResponseDto.EmailResultDto.builder()
+                .email(memberRandomNum.getMember().getEmail())
+                .succeed("success")
+                .build();
+    }
+
+    @Transactional(readOnly = false)
+    @Override
+    public FcmResponseDto.FcmResultDto sendFcmWorker(Long memberId) {
+
+        Member findMember = memberRepository.findById(memberId).get();
+        Optional<FcmToken> findFcmInfo = fcmTokenRepository.findByMember(findMember);
 
         if (findFcmInfo == null){
             log.error("해당 Fcm Token을 가지고 있는 사용자가 없습니다.");
@@ -197,8 +211,8 @@ public class NotifcationServiceImpl implements NotifcationService {
 
 
 
-        log.info("accessToken: ", accessToken, ", targetFcmToken: ", request.getFcmToken(),
-                ", title: ", notification.getTitle(), ", body: ", notification.getBody());
+//        log.info("accessToken: ", accessToken, ", targetFcmToken: ", request.getFcmToken(),
+//                ", title: ", notification.getTitle(), ", body: ", notification.getBody());
 
 
         return null;
