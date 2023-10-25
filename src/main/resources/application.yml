@@ -17,6 +17,12 @@ spring:
       email: "exchange:email"
     routing:
       email: "key:email"
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_URL}:9092
+    topic:
+      email: "email"
+    group: "group.email"
 
   mail:
     host: smtp.gmail.com
