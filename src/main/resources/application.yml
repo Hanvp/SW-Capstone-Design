@@ -6,24 +6,6 @@ spring:
     host: ${redis.url}
     port: 6379
 
-  rabbitmq:
-    url: ${RABBITMQ_URL}
-    port: 5672
-    username: ${RABBITMQ_DEFAULT_USER}
-    password: ${RABBITMQ_DEFAULT_PASS}
-    queue:
-      email: "queue:email"
-    exchange:
-      email: "exchange:email"
-    routing:
-      email: "key:email"
-  kafka:
-    consumer:
-      bootstrap-servers: ${KAFKA_URL}:9092
-    topic:
-      email: "email"
-    group: "group.email"
-
   mail:
     host: smtp.gmail.com
     port: 587
