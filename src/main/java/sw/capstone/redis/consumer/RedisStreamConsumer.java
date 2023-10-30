@@ -125,7 +125,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         );
 
         // 2초 마다, 정보 GET
-        this.subscription.await(Duration.ofSeconds(2));
+        this.subscription.await(Duration.ofMillis(100));
 
         // redis listen 시작
         this.listenerContainer.start();
