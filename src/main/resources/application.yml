@@ -7,17 +7,22 @@ spring:
     port: 6379
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${google.email.sender}
-    password: ${google.app.pw}
+    #    host: smtp.gmail.com
+    #    port: 587
+    #    username: ${google.email.sender}
+    #    password: ${google.app.pw}
+    host: mailhog
+    port: 1025
     properties:
       mail:
         smtp:
-          auth: true
+          #          auth: true
+          auth: false
           starttls:
-            enable: true
-            required: true
+            #            enable: true
+            #            required: true
+            enable: false
+            required: false
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000

@@ -15,6 +15,7 @@ import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.context.Context;
@@ -74,6 +75,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
             log.error("정보가 안담겨옴");
         }
         else {
+
+
             //처리할 로직 구현
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
 
@@ -124,8 +127,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
                 this
         );
 
-        // 2초 마다, 정보 GET
-        this.subscription.await(Duration.ofSeconds(2));
+        // 0.01밀리초 마다, 정보 GET
+//        this.subscription.await(Duration.ofNanos(10000));
 
         // redis listen 시작
         this.listenerContainer.start();
