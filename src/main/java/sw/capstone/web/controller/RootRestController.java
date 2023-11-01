@@ -61,4 +61,9 @@ public class RootRestController {
     public void setDB(@RequestBody RootRequestDto.request request) {
         rootService.setDB(request);
     }
+
+    @GetMapping("/log")
+    public void getCount() {
+        notificationService.getLog();
+    }
 }

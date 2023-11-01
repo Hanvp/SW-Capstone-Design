@@ -26,7 +26,10 @@ spring:
     level:
       root: info
       org.hibernate.SQL: DEBUG
-      org.hibernate.type: trace
+      org.hibernate.type:
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss.SSSSSS} %p %c{1.} [%t] %m%n"
+
 
 
   redis:

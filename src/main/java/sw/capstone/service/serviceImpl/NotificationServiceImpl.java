@@ -20,12 +20,15 @@ import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.dto.SmsRedisStream;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotificationService;
+import sw.capstone.web.dto.CheckRecordPer1000;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -43,6 +46,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final RabbitTemplate rabbitTemplate;
     private final KafkaProducer kafkaProducer;
+
+    List<CheckRecordPer1000> recordDto = new ArrayList<>();
 
     @Value("${spring.redis.key.sms}")
     private String smsStream;
@@ -79,6 +84,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Value("${spring.kafka.topic.fcm}")
     private String fcmTopic;
+
+    private Boolean start = true;
+    AtomicLong count= new AtomicLong(1);
 
 
     @Transactional(readOnly = false)
@@ -142,6 +150,15 @@ public class NotificationServiceImpl implements NotificationService {
             map.put("info",value);
             this.redisTemplate.opsForStream().add(emailStream, map);
 
+            if (start){
+                log.info("1st record produce time: "+ LocalDateTime.now());
+                start = false;
+            }
+
+            if (count.getAndIncrement() % 10000 == 0) {
+                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+            }
+
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -163,6 +180,15 @@ public class NotificationServiceImpl implements NotificationService {
                 new EmailRabbitMQDto(memberRandomNum.getMember().getEmail(),
                         memberRandomNum.getRandomNum().getValue()));
 
+        if (start){
+            log.info("1st record produce time: "+ LocalDateTime.now());
+            start = false;
+        }
+
+        if (count.getAndIncrement() % 10000 == 0) {
+            recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+        }
+
         return EmailResponseDto.EmailResultDto.builder()
                 .email(memberRandomNum.getMember().getEmail())
                 .succeed("success")
@@ -180,6 +206,15 @@ public class NotificationServiceImpl implements NotificationService {
         kafkaProducer.send(emailTopic, EmailKafkaDto.builder()
                 .targetEmail(findMember.get().getEmail())
                 .randomNum(memberRandomNum.getRandomNum().getValue()).build());
+
+        if (start){
+            log.info("1st record produce time: "+ LocalDateTime.now());
+            start = false;
+        }
+
+        if (count.getAndIncrement() % 10000 == 0) {
+            recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+        }
 
 
         return EmailResponseDto.EmailResultDto.builder()
@@ -258,5 +293,10 @@ public class NotificationServiceImpl implements NotificationService {
                 .member(member)
                 .randomNum(savedRandomNum)
                 .build());
+    }
+
+    @Override
+    public void getLog() {
+        recordDto.stream().forEach(record -> log.info(record.getCount() + ": "+ record.getLocalDateTime()));
     }
 }

@@ -19,7 +19,7 @@ public class KafkaProducer {
 
         String jsonInString = objectMapper.writeValueAsString(dto);
         kafkaTemplate.send(topic, jsonInString);
-        log.info("kafka producer sent: ", dto.toString());
+//        log.info("kafka producer sent: ", dto.toString());
 
         return dto;
     }

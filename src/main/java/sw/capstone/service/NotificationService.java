@@ -17,4 +17,7 @@ public interface NotificationService {
     EmailResponseDto.EmailResultDto sendEmailMqWorker(Long memberId);
 
     EmailResponseDto.EmailResultDto sendEmailKafkaWorker(Long memberId) throws JsonProcessingException;
+
+    void getLog();
+
 }
