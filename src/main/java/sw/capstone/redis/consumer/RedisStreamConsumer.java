@@ -18,19 +18,26 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import sw.capstone.converter.EmailConverter;
 import sw.capstone.redis.dto.EmailRedisStream;
 import sw.capstone.redis.util.RedisOperator;
+import sw.capstone.web.dto.CheckRecordPer1000;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
-@Component
+//@Component
+@Service
 @RequiredArgsConstructor
 public class RedisStreamConsumer implements StreamListener<String, MapRecord<String, Object, Object>>, InitializingBean, DisposableBean {
 
@@ -48,6 +55,11 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     // 위에 구현한 Redis Streamd에 필요한 기본 Command를 구현한 Component
     private final RedisOperator redisOperator;
+
+    List<CheckRecordPer1000> recordDto = new ArrayList<>();
+
+    private Boolean start = true;
+    AtomicLong count= new AtomicLong(1);
 
     private String setContext(String randomNum) {
         Context context = new Context();
@@ -75,7 +87,14 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
             log.error("정보가 안담겨옴");
         }
         else {
+            if (start){
+                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+                start = false;
+            }
 
+            if (count.getAndIncrement() % 10000 == 0) {
+                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+            }
 
             //처리할 로직 구현
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
@@ -132,5 +151,9 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
         // redis listen 시작
         this.listenerContainer.start();
+    }
+
+    public void getLog() {
+        recordDto.stream().forEach(record -> log.info(record.getCount() + ": "+ record.getLocalDateTime()));
     }
 }

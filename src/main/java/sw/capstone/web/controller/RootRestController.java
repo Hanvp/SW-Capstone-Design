@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sw.capstone.redis.consumer.RedisStreamConsumer;
 import sw.capstone.service.EmailService;
 import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
@@ -18,6 +19,7 @@ import sw.capstone.web.dto.responseDto.EmailResponseDto;
 public class RootRestController {
 
     private final EmailService emailService;
+    private final RedisStreamConsumer redisStreamConsumer;
 
     @GetMapping("/health")
     public String healthAPi(){
@@ -27,5 +29,10 @@ public class RootRestController {
     @PostMapping("/email")
     public EmailResponseDto.EmailSendResultDto sendToEmailApi(@RequestBody EmailRequestDto.EmailSendInfo request) {
         return emailService.sendEmail(request);
+    }
+
+    @GetMapping("/log")
+    public void getCount() {
+        redisStreamConsumer.getLog();
     }
 }
