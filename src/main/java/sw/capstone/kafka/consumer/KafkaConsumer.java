@@ -13,11 +13,16 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import sw.capstone.converter.EmailConverter;
+import sw.capstone.web.dto.CheckRecordPer1000;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @Slf4j
@@ -29,6 +34,11 @@ public class KafkaConsumer {
 
     @Value("${spring.mail.auth-code-expiration-millis}")
     private Long authCodeExpirationMillis;
+
+    List<CheckRecordPer1000> recordDto = new ArrayList<>();
+
+    private Boolean start = true;
+    AtomicLong count= new AtomicLong(1);
 
     private String setContext(String randomNum) {
         Context context = new Context();
@@ -59,6 +69,15 @@ public class KafkaConsumer {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
 
             try {
+                if (start){
+                    recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+                    start = false;
+                }
+
+                if (count.getAndIncrement() % 1000 == 0) {
+                    recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+                }
+
                 MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
                 mimeMessageHelper.setTo(map.get("targetEmail").toString());
                 mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
@@ -70,5 +89,9 @@ public class KafkaConsumer {
                 log.info(EmailConverter.toEmailResultDto(map.get("targetEmail").toString(), map.get("randomNum").toString(), "fail").toString());
             }
         }
+    }
+
+    public void getLog() {
+        recordDto.stream().forEach(record -> log.info(record.getCount() + ": "+ record.getLocalDateTime()));
     }
 }

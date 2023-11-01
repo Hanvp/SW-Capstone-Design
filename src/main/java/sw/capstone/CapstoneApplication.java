@@ -1,14 +1,10 @@
 package sw.capstone;
 
-import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.kafka.annotation.EnableKafka;
 
-//@EnableRabbit
 @EnableKafka
-@EnableRedisRepositories
 @SpringBootApplication
 public class CapstoneApplication {
 

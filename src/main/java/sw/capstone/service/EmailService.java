@@ -5,4 +5,5 @@ import sw.capstone.web.dto.responseDto.EmailResponseDto;
 
 public interface EmailService {
     EmailResponseDto.EmailSendResultDto sendEmail(EmailRequestDto.EmailSendInfo request);
+
 }

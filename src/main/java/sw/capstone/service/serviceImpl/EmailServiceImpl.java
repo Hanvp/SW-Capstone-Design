@@ -11,16 +11,21 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import sw.capstone.converter.EmailConverter;
 import sw.capstone.service.EmailService;
+import sw.capstone.web.dto.CheckRecordPer1000;
 import sw.capstone.web.dto.requestDto.EmailRequestDto;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender javaMailSender;
@@ -51,4 +56,5 @@ public class EmailServiceImpl implements EmailService {
         context.setVariable("code", randomNum);
         return templateEngine.process("email",context);
     }
+
 }
