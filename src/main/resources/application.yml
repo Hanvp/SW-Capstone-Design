@@ -2,9 +2,6 @@
 
 
 spring:
-  redis:
-    host: ${redis.url}
-    port: 6379
 
   rabbitmq:
     url: ${RABBITMQ_URL}
@@ -17,31 +14,29 @@ spring:
       email: "exchange:email"
     routing:
       email: "key:email"
-  kafka:
-    consumer:
-      bootstrap-servers: ${KAFKA_URL}:9092
-    topic:
-      email: "email"
-    group: "group.email"
 
   mail:
-#    host: smtp.gmail.com
-#    port: 587
-#    username: ${google.email.sender}
-#    password: ${google.app.pw}
-    host: localhost
+    #    host: smtp.gmail.com
+    #    port: 587
+    #    username: ${google.email.sender}
+    #    password: ${google.app.pw}
+    host: mailhog
     port: 1025
     properties:
       mail:
         smtp:
-#          auth: true
+          #          auth: true
           auth: false
           starttls:
-#            enable: true
-#            required: true
+            #            enable: true
+            #            required: true
             enable: false
             required: false
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
     auth-code-expiration-millis: 1800000  # 30 * 60 * 1000 == 30분
+
+  logging:
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss.SSSSSS} %p %c{1.} [%t] %m%n"

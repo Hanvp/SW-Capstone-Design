@@ -11,10 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import sw.capstone.converter.EmailConverter;
+import sw.capstone.rabbitMQ.dto.CheckRecordPer1000;
 import sw.capstone.rabbitMQ.dto.EmailRabbitMQDto;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 @Slf4j
@@ -29,6 +34,11 @@ public class RabbitMqService {
     @Value("${spring.mail.auth-code-expiration-millis}")
     private Long authCodeExpirationMillis;
 
+    Boolean start = true;
+    AtomicLong count = new AtomicLong(1);
+    List<CheckRecordPer1000> recordDto = new ArrayList<>();
+
+
     private String setContext(String randomNum) {
         Context context = new Context();
         context.setVariable("code", randomNum);
@@ -42,6 +52,16 @@ public class RabbitMqService {
             log.error("정보가 안담겨옴");
         }
         else {
+            if (start){
+                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+//                log.info("1st record consume time: " + LocalDateTime.now());
+                start = false;
+            }
+
+            if (count.getAndIncrement() % 1000 == 0) {
+                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+            }
+
             log.info(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum());
 
             //처리할 로직 구현
@@ -54,10 +74,14 @@ public class RabbitMqService {
                 mimeMessageHelper.setText(setContext(rabbitMQDto.getRandomNum()), true);
                 javaMailSender.send(mimeMessage);
 
-                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "success").toString());
+//                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "success").toString());
             } catch (MessagingException e) {
-                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "fail").toString());
+//                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "fail").toString());
             }
         }
+    }
+
+    public void getLog() {
+        recordDto.stream().forEach(record -> log.info(record.getCount() + ": " + record.getLocalDateTime()));
     }
 }

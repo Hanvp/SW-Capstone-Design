@@ -51,4 +51,5 @@ public class EmailServiceImpl implements EmailService {
         context.setVariable("code", randomNum);
         return templateEngine.process("email",context);
     }
+
 }
