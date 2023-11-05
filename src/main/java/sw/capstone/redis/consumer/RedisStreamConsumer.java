@@ -19,6 +19,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import sw.capstone.converter.EmailConverter;
@@ -33,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -70,50 +72,59 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     @Override
     public void onMessage(MapRecord<String, Object, Object> record) {
         // 처리할 로직 구현
-        log.info(record.toString());
 
-        String data = (String) record.getValue().get("info");
+        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
 
-        Optional<EmailRedisStream> value = null;
+        // 이후, ack stream
+        this.redisOperator.ackStream("email", record);
 
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            value = Optional.of(objectMapper.readValue(data, EmailRedisStream.class));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
 
-        if (value.get() == null){
-            log.error("정보가 안담겨옴");
-        }
-        else {
-            if (start){
-                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
-                start = false;
-            }
 
-            if (count.getAndIncrement() % 10000 == 0) {
-                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
-            }
-
-            //처리할 로직 구현
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-
-            try {
-                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-                mimeMessageHelper.setTo(value.get().getTargetEmail());
-                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
-                mimeMessageHelper.setText(setContext(value.get().getRandomNum()), true);
-                javaMailSender.send(mimeMessage);
-
-                log.info(EmailConverter.toEmailResultDto(value.get().getTargetEmail(), value.get().getRandomNum(), "success").toString());
-            } catch (MessagingException e) {
-                log.info(EmailConverter.toEmailResultDto(value.get().getTargetEmail(), value.get().getRandomNum(), "fail").toString());
-            }
-
-            // 이후, ack stream
-            this.redisOperator.ackStream("email", record);
-        }
+//        // 처리할 로직 구현
+//        log.info(record.toString());
+//
+//        String data = (String) record.getValue().get("info");
+//
+//        Optional<EmailRedisStream> value = null;
+//
+//        try {
+//            ObjectMapper objectMapper = new ObjectMapper();
+//            value = Optional.of(objectMapper.readValue(data, EmailRedisStream.class));
+//        } catch (JsonProcessingException e) {
+//            throw new RuntimeException(e);
+//        }
+//
+//        if (value.get() == null){
+//            log.error("정보가 안담겨옴");
+//        }
+//        else {
+//            if (start){
+//                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+//                start = false;
+//            }
+//
+//            if (count.getAndIncrement() % 10000 == 0) {
+//                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+//            }
+//
+//            //처리할 로직 구현
+//            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+//
+//            try {
+//                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+//                mimeMessageHelper.setTo(value.get().getTargetEmail());
+//                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
+//                mimeMessageHelper.setText(setContext(value.get().getRandomNum()), true);
+//                javaMailSender.send(mimeMessage);
+//
+//                log.info(EmailConverter.toEmailResultDto(value.get().getTargetEmail(), value.get().getRandomNum(), "success").toString());
+//            } catch (MessagingException e) {
+//                log.info(EmailConverter.toEmailResultDto(value.get().getTargetEmail(), value.get().getRandomNum(), "fail").toString());
+//            }
+//
+//            // 이후, ack stream
+//            this.redisOperator.ackStream("email", record);
+//        }
     }
 
     @Override
@@ -131,7 +142,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         // Stream 기본 정보
         this.streamKey = "stream:email";
         this.consumerGroupName = "email";
-        this.consumerName = "email1";
+        this.consumerName = UUID.randomUUID().toString().substring(5);
 
         // Consumer Group 설정
         this.redisOperator.createStreamConsumerGroup(streamKey, consumerGroupName);
