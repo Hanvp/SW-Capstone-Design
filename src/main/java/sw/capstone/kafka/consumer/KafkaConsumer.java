@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class KafkaConsumer {
 
-    private final JavaMailSender javaMailSender;
+//    private final JavaMailSender javaMailSender;
     private final SpringTemplateEngine templateEngine;
 
     @Value("${spring.mail.auth-code-expiration-millis}")
@@ -49,46 +49,49 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "${spring.kafka.topic.email}")
     public void receiveMessage(String kafkaMessage) {
-        if (kafkaMessage == null){
-            log.error("정보가 안담겨옴");
-        }
-        else {
-            Map<Object, Object> map = new HashMap<>();
-            ObjectMapper objectMapper = new ObjectMapper();
-
-            try {
-                map = objectMapper.readValue(kafkaMessage, new TypeReference<Map<Object, Object>>() {});
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
-
-            log.info(map.get("targetEmail").toString(), map.get("randomNum").toString());
-
-
-            //처리할 로직 구현
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-
-            try {
-                if (start){
-                    recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
-                    start = false;
-                }
-
-                if (count.getAndIncrement() % 1000 == 0) {
-                    recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
-                }
-
-                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-                mimeMessageHelper.setTo(map.get("targetEmail").toString());
-                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
-                mimeMessageHelper.setText(setContext(map.get("randomNum").toString()), true);
-                javaMailSender.send(mimeMessage);
-
-                log.info(EmailConverter.toEmailResultDto(map.get("targetEmail").toString(), map.get("randomNum").toString(), "success").toString());
-            } catch (MessagingException e) {
-                log.info(EmailConverter.toEmailResultDto(map.get("targetEmail").toString(), map.get("randomNum").toString(), "fail").toString());
-            }
-        }
+        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
+//
+//
+//        if (kafkaMessage == null){
+//            log.error("정보가 안담겨옴");
+//        }
+//        else {
+//            Map<Object, Object> map = new HashMap<>();
+//            ObjectMapper objectMapper = new ObjectMapper();
+//
+//            try {
+//                map = objectMapper.readValue(kafkaMessage, new TypeReference<Map<Object, Object>>() {});
+//            } catch (JsonProcessingException e) {
+//                e.printStackTrace();
+//            }
+//
+//            log.info(map.get("targetEmail").toString(), map.get("randomNum").toString());
+//
+//
+//            //처리할 로직 구현
+//            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+//
+//            try {
+//                if (start){
+//                    recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+//                    start = false;
+//                }
+//
+//                if (count.getAndIncrement() % 1000 == 0) {
+//                    recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+//                }
+//
+//                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+//                mimeMessageHelper.setTo(map.get("targetEmail").toString());
+//                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
+//                mimeMessageHelper.setText(setContext(map.get("randomNum").toString()), true);
+//                javaMailSender.send(mimeMessage);
+//
+//                log.info(EmailConverter.toEmailResultDto(map.get("targetEmail").toString(), map.get("randomNum").toString(), "success").toString());
+//            } catch (MessagingException e) {
+//                log.info(EmailConverter.toEmailResultDto(map.get("targetEmail").toString(), map.get("randomNum").toString(), "fail").toString());
+//            }
+//        }
     }
 
     public void getLog() {
