@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class RabbitMqService {
 
-    private final JavaMailSender javaMailSender;
+//    private final JavaMailSender javaMailSender;
     private final SpringTemplateEngine templateEngine;
 
     @Value("${spring.mail.auth-code-expiration-millis}")
@@ -46,39 +46,41 @@ public class RabbitMqService {
     }
 
     @RabbitListener(queues = "${spring.rabbitmq.queue.email}")
-    public void receiveMessage(EmailRabbitMQDto rabbitMQDto) {
+    public void receiveMessage(byte[] content) {
 
-        if (rabbitMQDto == null){
-            log.error("정보가 안담겨옴");
-        }
-        else {
-            if (start){
-                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
-//                log.info("1st record consume time: " + LocalDateTime.now());
-                start = false;
-            }
+        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
 
-            if (count.getAndIncrement() % 1000 == 0) {
-                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
-            }
-
-            log.info(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum());
-
-            //처리할 로직 구현
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-
-            try {
-                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-                mimeMessageHelper.setTo(rabbitMQDto.getTargetEmail());
-                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
-                mimeMessageHelper.setText(setContext(rabbitMQDto.getRandomNum()), true);
-                javaMailSender.send(mimeMessage);
-
-//                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "success").toString());
-            } catch (MessagingException e) {
-//                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "fail").toString());
-            }
-        }
+//        if (rabbitMQDto == null){
+//            log.error("정보가 안담겨옴");
+//        }
+//        else {
+//            if (start){
+//                recordDto.add(new CheckRecordPer1000(1L, LocalDateTime.now()));
+////                log.info("1st record consume time: " + LocalDateTime.now());
+//                start = false;
+//            }
+//
+//            if (count.getAndIncrement() % 1000 == 0) {
+//                recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+//            }
+//
+//            log.info(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum());
+//
+//            //처리할 로직 구현
+//            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+//
+//            try {
+//                MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+//                mimeMessageHelper.setTo(rabbitMQDto.getTargetEmail());
+//                mimeMessageHelper.setSubject("sw-capstone 인증 이메일 테스트");
+//                mimeMessageHelper.setText(setContext(rabbitMQDto.getRandomNum()), true);
+//                javaMailSender.send(mimeMessage);
+//
+////                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "success").toString());
+//            } catch (MessagingException e) {
+////                log.info(EmailConverter.toEmailResultDto(rabbitMQDto.getTargetEmail(), rabbitMQDto.getRandomNum(), "fail").toString());
+//            }
+//        }
     }
 
     public void getLog() {
