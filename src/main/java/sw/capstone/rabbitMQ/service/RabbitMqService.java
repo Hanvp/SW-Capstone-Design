@@ -48,7 +48,8 @@ public class RabbitMqService {
     @RabbitListener(queues = "${spring.rabbitmq.queue.email}")
     public void receiveMessage(byte[] content) {
 
-        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
+        if(count.get() % 10 == 0)
+            log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
 
 //        if (rabbitMQDto == null){
 //            log.error("정보가 안담겨옴");
