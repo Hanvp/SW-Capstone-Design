@@ -61,7 +61,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     List<CheckRecordPer1000> recordDto = new ArrayList<>();
 
     private Boolean start = true;
-    AtomicLong count= new AtomicLong(1);
+    AtomicLong count= new AtomicLong(0);
 
     private String setContext(String randomNum) {
         Context context = new Context();
@@ -73,13 +73,15 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     public void onMessage(MapRecord<String, Object, Object> record) {
         // 처리할 로직 구현
 
-        if(count.get() % 10 == 0)
-            log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
+        if(count.getAndIncrement() % 10 == 0)
+            log.info(LocalDateTime.now() + ": " + count.get());
+
+        log.info(record.toString());
+        String data = (String) record.getValue().get("info");
+        log.info(data);
 
         // 이후, ack stream
         this.redisOperator.ackStream("email", record);
-
-
 
 //        // 처리할 로직 구현
 //        log.info(record.toString());
