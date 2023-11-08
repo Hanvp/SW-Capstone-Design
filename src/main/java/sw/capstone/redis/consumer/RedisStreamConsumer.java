@@ -73,7 +73,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     public void onMessage(MapRecord<String, Object, Object> record) {
         // 처리할 로직 구현
 
-        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
+        if(count.get() % 10 == 0)
+            log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
 
         // 이후, ack stream
         this.redisOperator.ackStream("email", record);
