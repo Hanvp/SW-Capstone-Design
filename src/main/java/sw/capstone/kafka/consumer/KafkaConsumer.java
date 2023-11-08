@@ -49,7 +49,8 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "${spring.kafka.topic.email}")
     public void receiveMessage(String kafkaMessage) {
-        log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
+        if (count.get() % 10 == 0)
+            log.info(LocalDateTime.now() + ": " + count.getAndIncrement());
 //
 //
 //        if (kafkaMessage == null){

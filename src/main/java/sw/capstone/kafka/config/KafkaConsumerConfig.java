@@ -13,6 +13,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @EnableKafka
 @Configuration
@@ -29,6 +30,7 @@ public class KafkaConsumerConfig{
         Map<String, Object> properties = new HashMap<>();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, emailGroup);
+        properties.put(ConsumerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         return new DefaultKafkaConsumerFactory<>(properties);
