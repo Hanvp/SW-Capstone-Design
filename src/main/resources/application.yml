@@ -22,6 +22,10 @@ spring:
           auto: update
         default_batch_fetch_size: 1000
 
+  batch:
+    jdbc:
+      initialize-schema: always
+
   logging:
     level:
       root: info
@@ -29,7 +33,6 @@ spring:
       org.hibernate.type:
     pattern:
       console: "%d{yyyy-MM-dd HH:mm:ss.SSSSSS} %p %c{1.} [%t] %m%n"
-
 
 
   redis:
@@ -71,6 +74,19 @@ spring:
       email: "email"
       sms: "sms"
       fcm: "fcm"
+
+logging:
+  file:
+    path: ./notif-server #파일 저장 위치
+    name: notif-log
+  logback:
+    rollingPolicy:
+      clean-history-on-start: true
+      max-file-size: 1GB
+      max-history: 1
+      total-size-cap: 1GB
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSSSSS} %p %c{1.} [%t] %m%n"
 
 oauth2:
   fcm:

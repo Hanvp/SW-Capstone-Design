@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.ObjectRecord;
+import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +24,14 @@ import sw.capstone.redis.dto.SmsRedisStream;
 import sw.capstone.repository.*;
 import sw.capstone.service.NotificationService;
 import sw.capstone.web.dto.CheckRecordPer1000;
+import sw.capstone.web.dto.responseDto.BasicResponseDto;
 import sw.capstone.web.dto.responseDto.EmailResponseDto;
 import sw.capstone.web.dto.responseDto.FcmResponseDto;
 import sw.capstone.web.dto.responseDto.SmsResponseDto;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -298,5 +303,70 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void getLog() {
         recordDto.stream().forEach(record -> log.info(record.getCount() + ": "+ record.getLocalDateTime()));
+    }
+
+    //----- batch로 동작 -----
+
+    @Transactional(readOnly = false)
+    @Override
+    public BasicResponseDto.ResultDto batchEmailRedisWorker(byte[] content) {
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            HashMap<String, String> map = new HashMap<>();
+            String value = objectMapper.writeValueAsString(content);
+
+            map.put("info", value);
+            map.put("claimTime",String.valueOf(System.currentTimeMillis()));
+            this.redisTemplate.opsForStream().add(emailStream, map);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return BasicResponseDto.ResultDto.builder()
+                .succeed("success")
+                .build();
+
+    }
+
+    @Transactional(readOnly = false)
+    @Override
+    public BasicResponseDto.ResultDto batchEmailMqWorker(byte[] content) {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            String value = objectMapper.writeValueAsString(content);
+            value += LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            rabbitTemplate.convertAndSend(emailExchange, emailRoutingKey, content);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+//        if (count.getAndIncrement() % 10000 == 0) {
+//            recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+//        }
+
+        return BasicResponseDto.ResultDto.builder()
+                .succeed("success")
+                .build();
+    }
+
+    @Transactional(readOnly = false)
+    @Override
+    public BasicResponseDto.ResultDto batchEmailKafkaWorker(byte[] content) throws JsonProcessingException {
+
+
+        kafkaProducer.send(emailTopic, content);
+
+//        if (count.getAndIncrement() % 10000 == 0) {
+//            recordDto.add(new CheckRecordPer1000(count.get()-1, LocalDateTime.now()));
+//        }
+
+        return BasicResponseDto.ResultDto.builder()
+                .succeed("success")
+                .build();
     }
 }
