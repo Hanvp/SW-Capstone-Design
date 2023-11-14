@@ -33,6 +33,7 @@ dependencies {
 	implementation group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
 //	implementation 'ch.qos.logback:logback-classic:1.2.3'
 //	implementation 'ch.qos.logback:logback-core:1.2.3'
