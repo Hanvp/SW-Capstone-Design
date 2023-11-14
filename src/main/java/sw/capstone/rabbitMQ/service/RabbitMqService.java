@@ -125,32 +125,30 @@ public class RabbitMqService {
             jitter.add(result.get(i) - average);
         }
 
-        List<Long> jitterGraph = new ArrayList<>(Collections.nCopies(20, 0L));
-
         Collections.sort(jitter);
-//        Double firstValue = jitter.get(0);
-//        Double lastValue = jitter.get(jitter.size() - 1);
-//        Double differ = lastValue-firstValue;
-//        double section = differ / 100.0;
-//
-//        log.info("differ: "+differ+", 1% section: "+section);
+
+        double sector = Math.max(jitter.get(size - 1), Math.abs(jitter.get(0))) / 10.0;
+
+        List<Long> jitterGraph = new ArrayList<>(Collections.nCopies(20, 0L));
 
         int index = 0;
 
-        for (int i = 0; i < 20; i++) {
-//            double start = firstValue + section * i;
-//            double end = start + section;
-            double start = i - 7;
-            double end = start + 1;
+        double first = (-1)*sector*10;
 
-            while (jitter.get(index) < end) {
+        log.info("Min jitter value: "+ jitter.get(0));
+        log.info("Max jitter value: "+ jitter.get(size-1));
+        for (int i = 0; i < 20; i++) {
+
+            double start = first + sector*i;
+            double end = start + sector;
+
+            while (index < size && jitter.get(index) < end) {
                 if(jitter.get(index) >= start) {
                     jitterGraph.set(i, jitterGraph.get(i) + 1L);
                     index++;
                 }
             }
-
-            log.info(start+"~"+end+"구간: "+jitterGraph.get(i)/(size*1.0)*100+"%");
+            log.info((i*5)+"%구간: "+jitterGraph.get(i)/(size*1.0)*100+"%");
         }
     }
 
