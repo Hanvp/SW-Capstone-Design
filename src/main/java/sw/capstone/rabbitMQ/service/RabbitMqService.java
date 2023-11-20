@@ -41,6 +41,8 @@ public class RabbitMqService {
     List<Long> result = new ArrayList<>();
     AtomicInteger count= new AtomicInteger(0);
 
+    List<Long> produceTime = new ArrayList<>();
+    List<Long> consumeTime = new ArrayList<>();
 
     private String setContext(String randomNum) {
         Context context = new Context();
@@ -58,13 +60,21 @@ public class RabbitMqService {
 
         Long differ = now - Long.parseLong(sendTime);
 
+        produceTime.add(Long.parseLong(sendTime));
+        consumeTime.add(now);
         result.add(differ);
         count.getAndIncrement();
+
     }
 
     public void getLog(int size) {
         Collections.sort(result);
 //        result.sort((a, b) -> a.compareTo(b));
+
+        Collections.sort(produceTime);
+        Collections.sort(consumeTime);
+
+        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
         int p50 = (int)(size * 0.5);
         int p90 = (int)(size * 0.9);
