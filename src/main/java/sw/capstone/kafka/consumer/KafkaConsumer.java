@@ -42,6 +42,9 @@ public class KafkaConsumer {
     List<Long> result = new ArrayList<>();
     AtomicInteger count= new AtomicInteger(0);
 
+    List<Long> produceTime = new ArrayList<>();
+    List<Long> consumeTime = new ArrayList<>();
+
     private String setContext(String randomNum) {
         Context context = new Context();
         context.setVariable("code", randomNum);
@@ -67,11 +70,19 @@ public class KafkaConsumer {
 
         Long differ = now - Long.parseLong(sendTime);
 
+        produceTime.add(Long.parseLong(sendTime));
+        consumeTime.add(now);
         result.add(differ);
         count.getAndIncrement();
     }
 
     public void getLog(int size) {
+
+        Collections.sort(produceTime);
+        Collections.sort(consumeTime);
+        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
+
+
         Collections.sort(result);
 //        result.sort((a, b) -> a.compareTo(b));
 
@@ -175,11 +186,39 @@ public class KafkaConsumer {
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/produce";
+
+        List<Long> produceTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/consume";
+
+        List<Long> consumeTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
+        produceTime.addAll(produceTimeList);
+        consumeTime.addAll(consumeTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
     public List<Long> returnData() {
         return result;
+    }
+
+    public List<Long> returnProduce() {
+        return produceTime;
+    }
+
+    public List<Long> returnConsume() {
+        return consumeTime;
     }
 }
