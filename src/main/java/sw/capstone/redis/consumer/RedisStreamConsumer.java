@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
@@ -17,6 +19,7 @@ import org.springframework.data.redis.stream.Subscription;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -35,6 +38,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -62,30 +66,37 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     List<Long> result = new ArrayList<>();
     AtomicInteger count= new AtomicInteger(0);
 
+    List<Long> produceTime = new ArrayList<>();
+    List<Long> consumeTime = new ArrayList<>();
+
+
     private String setContext(String randomNum) {
         Context context = new Context();
         context.setVariable("code", randomNum);
         return templateEngine.process("email",context);
     }
 
+//    @Async("threadPoolTaskExecutor")
     @Override
     public void onMessage(MapRecord<String, Object, Object> record) {
         // 처리할 로직 구현
 
-        Long now = System.currentTimeMillis();
-        String sendTime = (String) record.getValue().get("claimTime");
+            Long now = System.currentTimeMillis();
+            String sendTime = (String) record.getValue().get("claimTime");
 
 //        log.info("Now: "+now+", Send Time: "+sendTime);
 
-        Long differ = now - Long.parseLong(sendTime);
+            Long differ = now - Long.parseLong(sendTime);
 
-        result.add(differ);
-        count.getAndIncrement();
+            produceTime.add(Long.parseLong(sendTime));
+            consumeTime.add(now);
+            result.add(differ);
+            count.getAndIncrement();
 
-        // 이후, ack stream
-        this.redisOperator.ackStream("email", record);
+            // 이후, ack stream
+            this.redisOperator.ackStream("email", record);
 
-        if(count.get() == 10000)
+        if(count.get() % 10000 == 0)
             log.info(LocalDateTime.now().toString());
 
     }
@@ -131,6 +142,10 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
         Collections.sort(result);
 //        result.sort((a, b) -> a.compareTo(b));
+
+        Collections.sort(produceTime);
+        Collections.sort(consumeTime);
+        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
         int p50 = (int)(size * 0.5);
         int p90 = (int)(size * 0.9);
@@ -232,11 +247,39 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/produce";
+
+        List<Long> produceTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/consume";
+
+        List<Long> consumeTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
+        produceTime.addAll(produceTimeList);
+        consumeTime.addAll(consumeTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
     public List<Long> returnData() {
         return result;
+    }
+
+    public List<Long> returnProduce() {
+        return produceTime;
+    }
+
+    public List<Long> returnConsume() {
+        return consumeTime;
     }
 }

@@ -44,4 +44,14 @@ public class RootRestController {
     public List<Long> returnData() {
         return redisStreamConsumer.returnData();
     }
+
+    @GetMapping("/produce")
+    public List<Long> returnProduce() {
+        return redisStreamConsumer.returnProduce();
+    }
+
+    @GetMapping("/consume")
+    public List<Long> returnConsume() {
+        return redisStreamConsumer.returnConsume();
+    }
 }
