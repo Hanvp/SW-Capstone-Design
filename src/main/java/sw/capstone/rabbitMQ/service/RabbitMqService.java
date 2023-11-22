@@ -176,11 +176,39 @@ public class RabbitMqService {
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/produce";
+
+        List<Long> produceTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/consume";
+
+        List<Long> consumeTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
+        produceTime.addAll(produceTimeList);
+        consumeTime.addAll(consumeTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
     public List<Long> returnData() {
         return result;
+    }
+
+    public List<Long> returnProduce() {
+        return produceTime;
+    }
+
+    public List<Long> returnConsume() {
+        return consumeTime;
     }
 }
