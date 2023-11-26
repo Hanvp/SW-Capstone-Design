@@ -54,4 +54,14 @@ public class RootRestController {
     public List<Long> returnConsume() {
         return rabbitMqService.returnConsume();
     }
+
+    @GetMapping("/toBroker")
+    public List<Long> returnToBrokerTime() {
+        return rabbitMqService.returnToBrokerTime();
+    }
+
+    @GetMapping("/toConsumer")
+    public List<Long> returnConsumerTime() {
+        return rabbitMqService.returnConsumerTime();
+    }
 }

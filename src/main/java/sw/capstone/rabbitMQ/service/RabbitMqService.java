@@ -1,7 +1,9 @@
 package sw.capstone.rabbitMQ.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,6 +19,7 @@ import sw.capstone.rabbitMQ.dto.EmailRabbitMQDto;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +47,9 @@ public class RabbitMqService {
     List<Long> produceTime = new ArrayList<>();
     List<Long> consumeTime = new ArrayList<>();
 
+    List<Long> producerToBroker = new ArrayList<>();
+    List<Long> brokerToConsumer = new ArrayList<>();
+
     private String setContext(String randomNum) {
         Context context = new Context();
         context.setVariable("code", randomNum);
@@ -51,17 +57,24 @@ public class RabbitMqService {
     }
 
     @RabbitListener(queues = "${spring.rabbitmq.queue.email}")
-    public void receiveMessage(Map<String, Object> content) {
+    public void receiveMessage(Message message) throws IOException {
 
         Long now = System.currentTimeMillis();
-        String sendTime = content.get("claimTime").toString();
 
-//        log.info("Now: "+now+", Send Time: "+sendTime);
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> content = objectMapper.readValue(message.getBody(), Map.class);
 
-        Long differ = now - Long.parseLong(sendTime);
+        Long sendTime = Long.parseLong(content.get("claimTime").toString());
+        Long brokerTime = message.getMessageProperties().getTimestamp().getTime();
 
-        produceTime.add(Long.parseLong(sendTime));
+        Long differ = now - sendTime;
+
+        produceTime.add(sendTime);
         consumeTime.add(now);
+
+        producerToBroker.add(brokerTime - sendTime);
+        brokerToConsumer.add(now-brokerTime);
+
         result.add(differ);
         count.getAndIncrement();
 
@@ -75,6 +88,27 @@ public class RabbitMqService {
         Collections.sort(consumeTime);
 
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
+
+        Collections.sort(producerToBroker);
+        Collections.sort(brokerToConsumer);
+
+        Long produceSum = 0L;
+        Long consumeSum = 0L;
+
+        for (Long value : producerToBroker)
+            produceSum += value;
+
+        for (Long value : brokerToConsumer)
+            consumeSum += value;
+
+        log.info("Producer -> Broker 최소 소요시간: " + producerToBroker.get(0));
+        log.info("Producer -> Broker 평균 소요시간: "+ produceSum / (size*1.0));
+        log.info("Producer -> Broker 최대 소요시간: " + producerToBroker.get(size-1));
+
+        log.info("Broker -> Consumer 최소 소요시간: " + brokerToConsumer.get(0));
+        log.info("Broker -> Consumer 평균 소요시간: "+ consumeSum / (size*1.0));
+        log.info("Broker -> Consumer 최대 소요시간: " + brokerToConsumer.get(size-1));
+
 
         int p50 = (int)(size * 0.5);
         int p90 = (int)(size * 0.9);
@@ -194,9 +228,29 @@ public class RabbitMqService {
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/toBroker";
+
+        List<Long> toBrokerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/toConsumer";
+
+        List<Long> toConsumerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
         produceTime.addAll(produceTimeList);
         consumeTime.addAll(consumeTimeList);
+        producerToBroker.addAll(toBrokerTimeList);
+        consumeTimeList.addAll(toConsumerTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
@@ -210,5 +264,13 @@ public class RabbitMqService {
 
     public List<Long> returnConsume() {
         return consumeTime;
+    }
+
+    public List<Long> returnToBrokerTime() {
+        return producerToBroker;
+    }
+
+    public List<Long> returnConsumerTime() {
+        return brokerToConsumer;
     }
 }
