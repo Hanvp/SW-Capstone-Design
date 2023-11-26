@@ -69,6 +69,9 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     List<Long> produceTime = new ArrayList<>();
     List<Long> consumeTime = new ArrayList<>();
 
+    List<Long> producerToBroker = new ArrayList<>();
+    List<Long> brokerToConsumer = new ArrayList<>();
+
 
     private String setContext(String randomNum) {
         Context context = new Context();
@@ -82,14 +85,20 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         // 처리할 로직 구현
 
             Long now = System.currentTimeMillis();
-            String sendTime = (String) record.getValue().get("claimTime");
+            Long sendTime = Long.parseLong((String) record.getValue().get("claimTime"));
+
+            Long brokerTime = record.getId().getTimestamp();
 
 //        log.info("Now: "+now+", Send Time: "+sendTime);
 
-            Long differ = now - Long.parseLong(sendTime);
+            Long differ = now - sendTime;
 
-            produceTime.add(Long.parseLong(sendTime));
+            produceTime.add(sendTime);
             consumeTime.add(now);
+
+            producerToBroker.add(brokerTime - sendTime);
+            brokerToConsumer.add(now-brokerTime);
+
             result.add(differ);
             count.getAndIncrement();
 
@@ -146,6 +155,27 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         Collections.sort(produceTime);
         Collections.sort(consumeTime);
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
+
+
+        Collections.sort(producerToBroker);
+        Collections.sort(brokerToConsumer);
+
+        Long produceSum = 0L;
+        Long consumeSum = 0L;
+
+        for (Long value : producerToBroker)
+            produceSum += value;
+
+        for (Long value : brokerToConsumer)
+            consumeSum += value;
+
+        log.info("Producer -> Broker 최소 소요시간: " + producerToBroker.get(0));
+        log.info("Producer -> Broker 평균 소요시간: "+ produceSum / (size*1.0));
+        log.info("Producer -> Broker 최대 소요시간: " + producerToBroker.get(size-1));
+
+        log.info("Broker -> Consumer 최소 소요시간: " + brokerToConsumer.get(0));
+        log.info("Broker -> Consumer 평균 소요시간: "+ consumeSum / (size*1.0));
+        log.info("Broker -> Consumer 최대 소요시간: " + brokerToConsumer.get(size-1));
 
         int p50 = (int)(size * 0.5);
         int p90 = (int)(size * 0.9);
@@ -265,9 +295,29 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/toBroker";
+
+        List<Long> toBrokerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/toConsumer";
+
+        List<Long> toConsumerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
         produceTime.addAll(produceTimeList);
         consumeTime.addAll(consumeTimeList);
+        producerToBroker.addAll(toBrokerTimeList);
+        consumeTimeList.addAll(toConsumerTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
@@ -281,5 +331,13 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     public List<Long> returnConsume() {
         return consumeTime;
+    }
+
+    public List<Long> returnToBrokerTime() {
+        return producerToBroker;
+    }
+
+    public List<Long> returnConsumerTime() {
+        return brokerToConsumer;
     }
 }

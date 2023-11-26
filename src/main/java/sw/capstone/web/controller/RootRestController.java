@@ -21,7 +21,7 @@ public class RootRestController {
     private final RedisStreamConsumer redisStreamConsumer;
 
     @GetMapping("/health")
-    public String healthAPi(){
+    public String healthAPi() {
         return "i'm healthy";
     }
 
@@ -53,5 +53,15 @@ public class RootRestController {
     @GetMapping("/consume")
     public List<Long> returnConsume() {
         return redisStreamConsumer.returnConsume();
+    }
+
+    @GetMapping("/toBroker")
+    public List<Long> returnToBrokerTime() {
+        return redisStreamConsumer.returnToBrokerTime();
+    }
+
+    @GetMapping("/toConsumer")
+    public List<Long> returnConsumerTime() {
+        return redisStreamConsumer.returnConsumerTime();
     }
 }
