@@ -54,4 +54,14 @@ public class RootRestController {
     public List<Long> returnConsume() {
         return kafkaConsumer.returnConsume();
     }
+
+    @GetMapping("/toBroker")
+    public List<Long> returnToBrokerTime() {
+        return kafkaConsumer.returnToBrokerTime();
+    }
+
+    @GetMapping("/toConsumer")
+    public List<Long> returnConsumerTime() {
+        return kafkaConsumer.returnConsumerTime();
+    }
 }

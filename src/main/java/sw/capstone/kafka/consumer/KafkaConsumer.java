@@ -45,6 +45,9 @@ public class KafkaConsumer {
     List<Long> produceTime = new ArrayList<>();
     List<Long> consumeTime = new ArrayList<>();
 
+    List<Long> producerToBroker = new ArrayList<>();
+    List<Long> brokerToConsumer = new ArrayList<>();
+
     private String setContext(String randomNum) {
         Context context = new Context();
         context.setVariable("code", randomNum);
@@ -53,25 +56,29 @@ public class KafkaConsumer {
 
 
     @KafkaListener(topics = "${spring.kafka.topic.email}")
-    public void receiveMessage(String kafkaMessage) {
+    public void receiveMessage(ConsumerRecord<String, String> record) {
 
         Long now = System.currentTimeMillis();
+
+        Long brokerTime = record.timestamp();
 
         Map<Object,Object> message = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
 
         try{
-            message = mapper.readValue(kafkaMessage, new TypeReference<Map<Object, Object>>() {});
+            message = mapper.readValue(record.value(), new TypeReference<Map<Object, Object>>() {});
         }catch (JsonProcessingException ex){
             ex.printStackTrace();
         }
 
-        String sendTime = message.get("claimTime").toString();
+        Long sendTime = Long.parseLong(message.get("claimTime").toString());
 
-        Long differ = now - Long.parseLong(sendTime);
+        Long differ = now - sendTime;
 
-        produceTime.add(Long.parseLong(sendTime));
+        produceTime.add(sendTime);
         consumeTime.add(now);
+        producerToBroker.add(brokerTime - sendTime);
+        brokerToConsumer.add(now-brokerTime);
         result.add(differ);
         count.getAndIncrement();
     }
@@ -82,6 +89,25 @@ public class KafkaConsumer {
         Collections.sort(consumeTime);
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
+        Collections.sort(producerToBroker);
+        Collections.sort(brokerToConsumer);
+
+        Long produceSum = 0L;
+        Long consumeSum = 0L;
+
+        for (Long value : producerToBroker)
+            produceSum += value;
+
+        for (Long value : brokerToConsumer)
+            consumeSum += value;
+
+        log.info("Producer -> Broker 최소 소요시간: " + producerToBroker.get(0));
+        log.info("Producer -> Broker 평균 소요시간: "+ produceSum / (size*1.0));
+        log.info("Producer -> Broker 최대 소요시간: " + producerToBroker.get(size-1));
+
+        log.info("Broker -> Consumer 최소 소요시간: " + brokerToConsumer.get(0));
+        log.info("Broker -> Consumer 평균 소요시간: "+ consumeSum / (size*1.0));
+        log.info("Broker -> Consumer 최대 소요시간: " + brokerToConsumer.get(size-1));
 
         Collections.sort(result);
 //        result.sort((a, b) -> a.compareTo(b));
@@ -204,9 +230,29 @@ public class KafkaConsumer {
                 .collectList()
                 .block();
 
+        uri = "http://" + ip + ":8080/toBroker";
+
+        List<Long> toBrokerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
+        uri = "http://" + ip + ":8080/toConsumer";
+
+        List<Long> toConsumerTimeList = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToFlux(Long.class)
+                .collectList()
+                .block();
+
         result.addAll(returnValue);
         produceTime.addAll(produceTimeList);
         consumeTime.addAll(consumeTimeList);
+        producerToBroker.addAll(toBrokerTimeList);
+        consumeTimeList.addAll(toConsumerTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
@@ -220,5 +266,13 @@ public class KafkaConsumer {
 
     public List<Long> returnConsume() {
         return consumeTime;
+    }
+
+    public List<Long> returnToBrokerTime() {
+        return producerToBroker;
+    }
+
+    public List<Long> returnConsumerTime() {
+        return brokerToConsumer;
     }
 }
