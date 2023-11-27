@@ -154,11 +154,15 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
         Collections.sort(produceTime);
         Collections.sort(consumeTime);
-        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
-
-
         Collections.sort(producerToBroker);
         Collections.sort(brokerToConsumer);
+
+        produceTime.remove(size);
+        consumeTime.remove(size);
+        producerToBroker.remove(size);
+        brokerToConsumer.remove(size);
+
+        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
         Long produceSum = 0L;
         Long consumeSum = 0L;
@@ -317,7 +321,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         produceTime.addAll(produceTimeList);
         consumeTime.addAll(consumeTimeList);
         producerToBroker.addAll(toBrokerTimeList);
-        consumeTimeList.addAll(toConsumerTimeList);
+        brokerToConsumer.addAll(toConsumerTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
