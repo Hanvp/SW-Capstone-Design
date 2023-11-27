@@ -62,10 +62,14 @@ public class RabbitMqService {
         Long now = System.currentTimeMillis();
 
         ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, Object> content = objectMapper.readValue(message.getBody(), Map.class);
+        String info = message.getBody().toString();
 
-        Long sendTime = Long.parseLong(content.get("claimTime").toString());
+        Long sendTime = Long.parseLong(message.getMessageProperties().getHeaders().get("claimTime").toString());
+
+        log.info(message.getMessageProperties().toString());
+
         Long brokerTime = message.getMessageProperties().getTimestamp().getTime();
+
 
         Long differ = now - sendTime;
 
@@ -86,11 +90,15 @@ public class RabbitMqService {
 
         Collections.sort(produceTime);
         Collections.sort(consumeTime);
-
-        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
-
         Collections.sort(producerToBroker);
         Collections.sort(brokerToConsumer);
+
+        produceTime.remove(size);
+        consumeTime.remove(size);
+        producerToBroker.remove(size);
+        brokerToConsumer.remove(size);
+
+        log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
         Long produceSum = 0L;
         Long consumeSum = 0L;
@@ -250,7 +258,7 @@ public class RabbitMqService {
         produceTime.addAll(produceTimeList);
         consumeTime.addAll(consumeTimeList);
         producerToBroker.addAll(toBrokerTimeList);
-        consumeTimeList.addAll(toConsumerTimeList);
+        brokerToConsumer.addAll(toConsumerTimeList);
         log.info("추가 후 size: " + result.size());
     }
 
