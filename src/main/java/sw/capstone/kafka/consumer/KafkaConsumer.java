@@ -14,6 +14,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.thymeleaf.context.Context;
@@ -56,7 +57,7 @@ public class KafkaConsumer {
 
 
     @KafkaListener(topics = "${spring.kafka.topic.email}")
-    public void receiveMessage(ConsumerRecord<String, String> record) {
+    public void receiveMessage(ConsumerRecord<String, String> record, @Header("claimTime") long sendTime) {
 
         Long now = System.currentTimeMillis();
 
@@ -65,14 +66,15 @@ public class KafkaConsumer {
         Map<String,Object> message = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
 
-        try{
-            message = mapper.readValue(record.value(), new TypeReference<Map<String, Object>>() {});
-            log.info(message.toString());
-        }catch (JsonProcessingException ex){
-            ex.printStackTrace();
-        }
+//        try{
+//            message = mapper.readValue(record.value(), new TypeReference<Map<String, Object>>() {});
+//            log.info(message.toString());
+//        }catch (JsonProcessingException ex){
+//            ex.printStackTrace();
+//        }
 
-        Long sendTime = Long.parseLong(message.get("claimTime").toString());
+//        Long sendTime = Long.parseLong(message.get("claimTime").toString());
+
 
         Long differ = now - sendTime;
 
@@ -86,17 +88,52 @@ public class KafkaConsumer {
 
     public void getLog(int size) {
 
-        Collections.sort(produceTime);
-        Collections.sort(consumeTime);
-        Collections.sort(producerToBroker);
-        Collections.sort(brokerToConsumer);
+        Collections.sort(result);
 
-//        produceTime.remove(size);
-//        consumeTime.remove(size);
-//        producerToBroker.remove(size);
-//        brokerToConsumer.remove(size);
+        if(size > 1) {
+//            produceTime.remove(0);
+//            consumeTime.remove(0);
+//            producerToBroker.remove(0);
+//            brokerToConsumer.remove(0);
+
+            Collections.sort(produceTime);
+            Collections.sort(consumeTime);
+            Collections.sort(producerToBroker);
+            Collections.sort(brokerToConsumer);
+        }
 
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
+
+        if(size > 1) {
+            ArrayList<Long> produceTermList = new ArrayList<>();
+            ArrayList<Long> consumeTermList = new ArrayList<>();
+            Long produceTermSum = 0L;
+            Long consumeTermSum = 0L;
+
+            for (Integer i = 1; i < size; i++) {
+                long differ = produceTime.get(i) - produceTime.get(i - 1);
+                produceTermList.add(differ);
+                produceTermSum += differ;
+            }
+
+            for (Integer i = 1; i < size; i++) {
+                long differ = consumeTime.get(i) - consumeTime.get(i - 1);
+                consumeTermList.add(differ);
+                consumeTermSum += differ;
+            }
+
+            Collections.sort(produceTermList);
+            Collections.sort(consumeTermList);
+
+            log.info("Produce Term 최소 소요시간: " + produceTermList.get(0));
+            log.info("Produce Term 평균 소요시간: " + produceTermSum / (size * 1.0 - 1));
+            log.info("Produce Term 최대 소요시간: " + produceTermList.get(size-1));
+
+            log.info("Consume Term 최소 소요시간: " + consumeTermList.get(0));
+            log.info("Consume Term 평균 소요시간: " + consumeTermSum / (size * 1.0 - 1));
+            log.info("Consume Term 최대 소요시간: " + consumeTermList.get(size-1));
+            log.info("");
+        }
 
         Long produceSum = 0L;
         Long consumeSum = 0L;
