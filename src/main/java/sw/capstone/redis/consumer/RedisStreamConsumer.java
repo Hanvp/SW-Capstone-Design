@@ -150,19 +150,40 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     public void getLog(int size) {
 
         Collections.sort(result);
-//        result.sort((a, b) -> a.compareTo(b));
 
-        Collections.sort(produceTime);
-        Collections.sort(consumeTime);
-        Collections.sort(producerToBroker);
-        Collections.sort(brokerToConsumer);
+        if(size > 1) {
+            produceTime.remove(0);
+            consumeTime.remove(0);
+            producerToBroker.remove(0);
+            brokerToConsumer.remove(0);
 
-        produceTime.remove(size);
-        consumeTime.remove(size);
-        producerToBroker.remove(size);
-        brokerToConsumer.remove(size);
+            Collections.sort(produceTime);
+            Collections.sort(consumeTime);
+            Collections.sort(producerToBroker);
+            Collections.sort(brokerToConsumer);
+        }
 
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
+
+        if(size > 1) {
+            Long produceTermSum = 0L;
+            Long consumeTermSum = 0L;
+
+            for (Integer i = 1; i < size; i++)
+                produceTermSum += produceTime.get(i) - produceTime.get(i - 1);
+
+            for (Integer i = 1; i < size; i++)
+                consumeTermSum += consumeTime.get(i) - consumeTime.get(i - 1);
+
+            log.info("Produce Term 최소 소요시간: " + (produceTime.get(1) - produceTime.get(0)));
+            log.info("Produce Term 평균 소요시간: " + produceTermSum / (size * 1.0 - 1));
+            log.info("Produce Term 최대 소요시간: " + (produceTime.get(size - 1) - produceTime.get(size - 2)));
+
+            log.info("Consume Term 최소 소요시간: " + (consumeTime.get(1) - consumeTime.get(0)));
+            log.info("Consume Term 평균 소요시간: " + consumeTermSum / (size * 1.0 - 1));
+            log.info("Consume Term 최대 소요시간: " + (consumeTime.get(size - 1) - consumeTime.get(size - 2)));
+            log.info("");
+        }
 
         Long produceSum = 0L;
         Long consumeSum = 0L;
@@ -180,6 +201,8 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
         log.info("Broker -> Consumer 최소 소요시간: " + brokerToConsumer.get(0));
         log.info("Broker -> Consumer 평균 소요시간: "+ consumeSum / (size*1.0));
         log.info("Broker -> Consumer 최대 소요시간: " + brokerToConsumer.get(size-1));
+        log.info("");
+
 
         int p50 = (int)(size * 0.5);
         int p90 = (int)(size * 0.9);
