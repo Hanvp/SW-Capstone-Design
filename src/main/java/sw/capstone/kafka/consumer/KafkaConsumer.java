@@ -88,19 +88,21 @@ public class KafkaConsumer {
 
     public void getLog(int size) {
 
-        Collections.sort(result);
+        Collections.sort(produceTime);
+        Collections.sort(consumeTime);
+        Collections.sort(producerToBroker);
+        Collections.sort(brokerToConsumer);
 
-        if(size > 1) {
-//            produceTime.remove(0);
-//            consumeTime.remove(0);
-//            producerToBroker.remove(0);
-//            brokerToConsumer.remove(0);
+        produceTime.remove(0);
+        consumeTime.remove(0);
+        producerToBroker.remove(size);
+        brokerToConsumer.remove(size);
 
-            Collections.sort(produceTime);
-            Collections.sort(consumeTime);
-            Collections.sort(producerToBroker);
-            Collections.sort(brokerToConsumer);
-        }
+        log.info("produceTime size: " + produceTime.size());
+        log.info("consumeTime size: " + consumeTime.size());
+        log.info("producerToBroker size: " + producerToBroker.size());
+        log.info("brokerToConsumer size: " + brokerToConsumer.size());
+
 
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
@@ -127,11 +129,11 @@ public class KafkaConsumer {
 
             log.info("Produce Term 최소 소요시간: " + produceTermList.get(0));
             log.info("Produce Term 평균 소요시간: " + produceTermSum / (size * 1.0 - 1));
-            log.info("Produce Term 최대 소요시간: " + produceTermList.get(size-1));
+            log.info("Produce Term 최대 소요시간: " + produceTermList.get(size-2));
 
             log.info("Consume Term 최소 소요시간: " + consumeTermList.get(0));
             log.info("Consume Term 평균 소요시간: " + consumeTermSum / (size * 1.0 - 1));
-            log.info("Consume Term 최대 소요시간: " + consumeTermList.get(size-1));
+            log.info("Consume Term 최대 소요시간: " + consumeTermList.get(size-2));
             log.info("");
         }
 
