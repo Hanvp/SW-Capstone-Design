@@ -149,19 +149,21 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
 
     public void getLog(int size) {
 
-        Collections.sort(result);
+        Collections.sort(produceTime);
+        Collections.sort(consumeTime);
+        Collections.sort(producerToBroker);
+        Collections.sort(brokerToConsumer);
 
-        if(size > 1) {
-//            produceTime.remove(0);
-//            consumeTime.remove(0);
-//            producerToBroker.remove(0);
-//            brokerToConsumer.remove(0);
+        produceTime.remove(0);
+        consumeTime.remove(0);
+        producerToBroker.remove(size);
+        brokerToConsumer.remove(size);
 
-            Collections.sort(produceTime);
-            Collections.sort(consumeTime);
-            Collections.sort(producerToBroker);
-            Collections.sort(brokerToConsumer);
-        }
+        log.info("produceTime size: " + produceTime.size());
+        log.info("consumeTime size: " + consumeTime.size());
+        log.info("producerToBroker size: " + producerToBroker.size());
+        log.info("brokerToConsumer size: " + brokerToConsumer.size());
+
 
         log.info("전체 소요 시간: "+ (consumeTime.get(size-1) - produceTime.get(0)));
 
