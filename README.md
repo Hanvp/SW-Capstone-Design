@@ -1,2 +1,2 @@
 # SW-Capstone-Design
-푸시알림 구현. 알림 서버와 서드파티의 강결합을 끊기 위해 사용하는 메시지 큐 대신, 성능을 끌어올릴 수 있는 방법을 찾아보도록 함.
+Redis Stream, Kafka, RabbitMQ의 성능을 비교
